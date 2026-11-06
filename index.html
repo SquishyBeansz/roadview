@@ -115,6 +115,9 @@
   #spVal{font-size:24px;font-weight:800;line-height:1}
   #recenter{position:fixed;right:14px;bottom:calc(var(--sb) + 104px);z-index:5;background:var(--panel);padding:13px 18px;
     border-radius:30px;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#7cb6ff}
+  .modefab{bottom:calc(var(--sb) + 92px)!important;flex-direction:column;display:flex!important;align-items:center;justify-content:center;font-size:21px;line-height:1}
+  .modefab small{font-size:10px;font-weight:700;color:var(--sub);margin-top:2px}
+  body:not(.search) .modefab{display:none!important}
   .fab{position:fixed;right:14px;bottom:calc(var(--sb) + 28px);z-index:4;width:54px;height:54px;border-radius:50%;
     background:var(--panel);display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.5)}
   #status{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--st) + 150px);z-index:7;background:#f59e0b;color:#111;
@@ -169,12 +172,14 @@
 
 <div id="navBar" class="hidden">
   <div class="nb-left"><div id="nbEta" class="nb-eta"></div><div id="nbSub" class="nb-sub"></div></div>
+  <button id="modeNav" class="roundbtn" aria-label="Switch car or walking">🚶</button>
   <button id="muteBtn" class="roundbtn" aria-label="Voice">🔊</button>
   <button id="endBtn" class="btn end">End</button>
 </div>
 
 <div id="speed" class="hidden"><div id="spVal">0</div><div>MPH</div></div>
 <button id="recenter" class="hidden">⦿ Re-center</button>
+<button id="modeFab" class="fab modefab" aria-label="Car or walking"><span id="modeIco">🚗</span><small id="modeTxt">Car</small></button>
 <button id="locBtn" class="fab" aria-label="My location">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="#2f8cff"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"/></svg>
 </button>
@@ -783,11 +788,44 @@ function setMode(m) {
 }
 
 $('cancelBtn').onclick = () => endTrip();
-$('mDrive').onclick = () => { if (travel !== 'drive' && dest) { travel = 'drive'; pickDest(dest); } };
-$('mWalk').onclick = () => { askCompass(); if (travel !== 'walk' && dest) { travel = 'walk'; pickDest(dest); } };
+function syncModeUI() {
+  const w = travel === 'walk';
+  $('modeIco').textContent = w ? '🚶' : '🚗'; $('modeTxt').textContent = w ? 'Walk' : 'Car';
+  $('modeNav').textContent = w ? '🚗' : '🚶';
+  $('mDrive').classList.toggle('on', !w); $('mWalk').classList.toggle('on', w);
+}
+$('modeFab').onclick = () => {
+  travel = travel === 'walk' ? 'drive' : 'walk';
+  if (travel === 'walk') askCompass();
+  syncModeUI();
+  toast(travel === 'walk' ? '🚶 Walking mode — routes use footpaths' : '🚗 Driving mode', 1800);
+};
+$('modeNav').onclick = async () => {
+  if (!dest || rerouting) return;
+  const wasSim = !!sim; stopSim();
+  travel = travel === 'walk' ? 'drive' : 'walk';
+  if (travel === 'walk') askCompass();
+  syncModeUI();
+  document.body.classList.toggle('walk', travel === 'walk');
+  walkLook(travel === 'walk');
+  $('walkOn').classList.add('hidden'); $('finder').classList.add('hidden');
+  const ll = carMarker._map ? carMarker.getLngLat() : null;
+  const from = ll ? [ll.lng, ll.lat] : (gps ? [gps.lon, gps.lat] : null);
+  if (!from) return;
+  rerouting = true; status(travel === 'walk' ? 'Switching to walking…' : 'Switching to driving…');
+  try {
+    setRoute(await getRoute(from, dest.ll));
+    arrived = false; offCount = 0; finderAnnounced = false; following = true;
+    say((travel === 'walk' ? 'Walking directions. ' : 'Driving directions. ') + instr(R.steps[0]));
+    if (wasSim || $('simChk').checked) startSim(); else if (gps) navUpdate(gps);
+  } catch (e) { toast('Could not get a ' + (travel === 'walk' ? 'walking' : 'driving') + ' route'); }
+  finally { rerouting = false; status(null); }
+};
+$('mDrive').onclick = () => { if (travel !== 'drive' && dest) { travel = 'drive'; syncModeUI(); pickDest(dest); } };
+$('mWalk').onclick = () => { askCompass(); if (travel !== 'walk' && dest) { travel = 'walk'; syncModeUI(); pickDest(dest); } };
 $('walkOn').onclick = async () => {
   $('walkOn').classList.add('hidden');
-  const place = dest; travel = 'walk';
+  const place = dest; travel = 'walk'; syncModeUI();
   const ll = carMarker.getLngLat();
   await pickDest(place, [ll.lng, ll.lat]);
   if (R) $('driveBtn').onclick();
@@ -827,7 +865,7 @@ $('locBtn').onclick = () => {
 function endTrip() {
   stopSim();
   R = null; dest = null; arrived = false;
-  travel = 'drive'; walkLook(false);
+  walkLook(false); syncModeUI();
   $('finder').classList.add('hidden'); $('walkOn').classList.add('hidden');
   const empty = { type: 'FeatureCollection', features: [] };
   ['route', 'turn', 'turnhead'].forEach(s => map.getSource(s) && map.getSource(s).setData(empty));
