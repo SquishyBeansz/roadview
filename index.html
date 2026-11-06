@@ -1043,6 +1043,85 @@ function computeGuidance() {
       if (s2 && s2.n) R.rec[i] = mapLanes(v, bar.length, s2.n, side === 'left' ? 'left' : 'right');
     }
   }
+  planBestLanes();
+}
+/* Best lane for every stretch with lane data, planned ahead to the next maneuver (and the one after) */
+function turnSide(kk) {
+  const st = R.steps[kk];
+  if (!st) return null;
+  const m = st.maneuver, mod = m.modifier || '';
+  if (m.type === 'arrive' || m.type === 'depart') return null;
+  if ((m.type === 'continue' || m.type === 'new name') && (mod === 'straight' || mod.startsWith('slight') || !mod)) return null;
+  if (mod === 'uturn') return 'left';
+  return sideOf(mod);
+}
+const isThrough = ind => !ind || ind.some(x => x === '' || x === 'none' || x === 'through');
+function bestLane(i, si, k, mid) {
+  const n = si.n, rec = R.rec[i];
+  if (rec && rec.length) {
+    if (rec.length === 1) return rec[0];
+    // several lanes work here: choose the one that sets you up for the following maneuver
+    const after = R.steps[k + 1] && (R.starts[k + 1] - R.starts[k]) < 800 ? turnSide(k + 1) : null;
+    const g = R.guide[k];
+    const sd = after || (g && (g.side === 'left' || g.side === 'right') ? g.side : (turnSide(k) || 'right'));
+    return sd === 'left' ? rec[0] : rec[rec.length - 1];
+  }
+  const dist = R.starts[k] - mid, sd = turnSide(k), g = R.guide[k];
+  const hwy = (si.ow && (si.hw === 'motorway' || si.hw === 'trunk')) || (si.ms && si.ms >= 50);
+  const prep = (g && g.hw) || hwy ? 3200 : 500;
+  // approaching a junction with known lanes: head for the lane you'll finally need, not just "the right side"
+  if (g && !g.all && g.v && dist < prep) {
+    const v = mapLanes(g.v, g.nBar, n, g.side === 'left' ? 'left' : 'right');
+    const after = R.steps[k + 1] && (R.starts[k + 1] - R.starts[k]) < 800 ? turnSide(k + 1) : null;
+    const sd2 = after || (g.side === 'left' ? 'left' : 'right');
+    return sd2 === 'left' ? v[0] : v[v.length - 1];
+  }
+  let b;
+  if (sd === 'right') b = dist < prep || n <= 2 ? n - 1 : n - 2;
+  else if (sd === 'left') b = dist < prep || n <= 2 ? 0 : (hwy ? 1 : 0);
+  else b = hwy && n >= 3 ? n - 2 : n - 1;   // straight on: keep right, out of the far-right lane on big highways
+  // don't sit in a lane that's about to turn off for a junction you're not using
+  if (si.turn && si.turn[b] && !isThrough(si.turn[b])) {
+    for (let d = 1; d < n; d++) for (const c of [b - d, b + d]) if (c >= 0 && c < n && isThrough(si.turn[c])) return c;
+  }
+  return b;
+}
+function planBestLanes() {
+  const N = R.c.length - 1;
+  R.best = new Array(N).fill(null); R.bestS = new Array(N).fill(null); R.segStep = new Array(N).fill(0);
+  let k = 1;
+  for (let i = 0; i < N; i++) {
+    const mid = (R.cum[i] + R.cum[i + 1]) / 2;
+    while (k < R.steps.length - 1 && R.starts[k] <= mid) k++;
+    R.segStep[i] = k;
+    const si = R.seg[i];
+    if (si && si.n) R.best[i] = bestLane(i, si, k, mid);
+  }
+  // smoothed position (in lanes): each lane change is spread over ~80 m and finishes BEFORE it's needed
+  const STEP = 0.25;
+  for (let i = N - 1; i >= 0; i--) {
+    const si = R.seg[i];
+    if (!si || !si.n || R.best[i] == null) continue;
+    const t = laneCentre(si, R.best[i]), nx = R.bestS[i + 1];
+    R.bestS[i] = (nx != null && R.segStep[i + 1] === R.segStep[i]) ? nx + Math.max(-STEP, Math.min(STEP, t - nx)) : t;
+  }
+}
+function laneName(b, n) {
+  if (n === 1) return 'only lane';
+  if (b === n - 1) return 'right lane';
+  if (b === 0) return 'left lane';
+  return b >= n / 2 ? ord(n - b) + ' lane from right' : ord(b + 1) + ' lane from left';
+}
+function reasonText(k, dTurn) {
+  const st = R.steps[k];
+  if (!st) return '';
+  const m = st.maneuver, d = fmtDist(dTurn), dd = d.v + ' ' + d.u, sd = turnSide(k);
+  if (m.type === 'arrive') return 'destination in ' + dd;
+  if (m.type === 'off ramp') return (st.exits ? 'exit ' + st.exits.split(';')[0] : 'exit') + ' in ' + dd;
+  if (m.type === 'fork') return 'keep ' + (sd || 'ahead') + ' in ' + dd;
+  if (m.type === 'roundabout' || m.type === 'rotary') return 'roundabout in ' + dd;
+  if (sd) return sd + ' turn in ' + dd;
+  return 'next change in ' + dd;
 }
 function stageList(g) { return g.hw ? [[3200, 'prep'], [1600, 'move'], [800, 'get'], [320, 'stay']] : [[500, 'prep'], [300, 'get'], [120, 'stay']]; }
 function stageText(g, step, stage, inGood) {
@@ -1086,17 +1165,31 @@ function buildRouteData(along, force) {
   if (!force && Math.abs(along - lastBuild.along) < 60 && lastBuild.ver === ver) return;
   lastBuild = { along, ver };
   const feats = [], i0 = segAt(Math.max(0, along - 25)), iWin = segAt(Math.min(R.total, along + 3500));
-  let run = null; recVisible = false;
+  let run = null, brun = null; recVisible = false;
   const flush = () => { if (run) emitRun(run, feats); run = null; };
   for (let i = i0; i < R.c.length - 1; i++) {
     const si = (i <= iWin && travel === 'drive' && R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
     const rec = si && R.rec ? R.rec[i] : null;
     const key = si ? `L${si.n}|${si.ow ? 1 : 0}|${si.bw}|${rec ? rec.join(',') : '-'}` : 'S' + R.offs[i];
+    if (si && R.bestS && R.bestS[i] != null) {
+      if (!brun || brun.step !== R.segStep[i] || brun.last !== i - 1) { if (brun) emitBest(brun, feats); brun = { step: R.segStep[i], from: i, last: i }; }
+      else brun.last = i;
+    } else if (brun) { emitBest(brun, feats); brun = null; }
     if (!run || run.key !== key) { flush(); run = { key, si, rec, off: R.offs[i], c: [R.c[i]] }; }
     run.c.push(R.c[i + 1]);
   }
   flush();
+  if (brun) emitBest(brun, feats);
   map.getSource('route').setData({ type: 'FeatureCollection', features: feats });
+}
+function emitBest(b, out) {
+  const pts = [];
+  for (let i = b.from; i <= b.last + 1; i++) {
+    const si = Math.min(i, b.last), o = R.bestS[si];
+    const brg = i > b.from && i <= b.last ? smoothAngle(bearing(R.c[i - 1], R.c[i]), bearing(R.c[i], R.c[i + 1]), 0.5) : bearing(R.c[si], R.c[si + 1]);
+    pts.push(shiftLL(R.c[i], brg, o * 3.6));
+  }
+  if (pts.length > 1) { recVisible = true; out.push({ type: 'Feature', properties: { k: 'best' }, geometry: { type: 'LineString', coordinates: pts } }); }
 }
 function emitRun(r, out) {
   const g = { type: 'LineString', coordinates: r.c };
@@ -1122,9 +1215,11 @@ function addLaneLayers() {
   L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2b3245', 'line-width': LANES_W(['get', 'w'], 1.5), 'line-offset': ROUTE_OFF });
   L('rt-lane', ['==', ['get', 'k'], 'lane'], {
     'line-color': '#2f8cff', 'line-width': LANES_W(0.9, 1.2), 'line-offset': ROUTE_OFF,
-    'line-opacity': ['match', ['get', 'st'], 2, 0.88, 1, 0.24, 0] });
-  L('rt-flow', ['all', ['==', ['get', 'k'], 'lane'], ['==', ['get', 'st'], 2]], {
-    'line-color': '#dff0ff', 'line-width': LANES_W(0.32, 0.6), 'line-offset': ROUTE_OFF, 'line-opacity': 0.75, 'line-dasharray': [0, 4, 3] });
+    'line-opacity': ['match', ['get', 'st'], 2, 0.42, 1, 0.14, 0] });
+  L('rt-best-casing', ['==', ['get', 'k'], 'best'], { 'line-color': '#0b3a86', 'line-width': LANES_W(1.0, 3.5), 'line-opacity': 0.9 }, { 'line-cap': 'round' });
+  L('rt-best', ['==', ['get', 'k'], 'best'], { 'line-color': '#2f8cff', 'line-width': LANES_W(0.82, 2.6), 'line-opacity': 0.95 }, { 'line-cap': 'round' });
+  L('rt-flow', ['==', ['get', 'k'], 'best'], {
+    'line-color': '#dff0ff', 'line-width': LANES_W(0.3, 0.6), 'line-opacity': 0.75, 'line-dasharray': [0, 4, 3] });
   L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-width': MARK_W, 'line-offset': ROUTE_OFF, 'line-dasharray': [4, 7] });
   L('rt-edgeR', ['==', ['get', 'k'], 'edgeR'], { 'line-color': '#f2f5fb', 'line-width': MARK_W, 'line-offset': ROUTE_OFF });
   L('rt-edgeY', ['==', ['get', 'k'], 'edgeY'], { 'line-color': '#f0c23b', 'line-width': MARK_W, 'line-offset': ROUTE_OFF,
@@ -1214,21 +1309,39 @@ function renderLaneBar(k, dTurn, f, advice) {
   const now = show && dTurn < (g.hw ? 500 : 150);
   const cur = show ? curBarLane(g) : null;
   $('banner').classList.toggle('close', !!(R.steps[k] && R.steps[k].maneuver.type !== 'arrive' && dTurn < (g && !g.all ? (g.hw ? 500 : 150) : 200)));
-  if (show) {
-    $('laneTip').textContent = advice || '';
-    const src = g.conf === 'confirmed' ? 'Lanes from map data' : 'Lane count from map · turn lanes estimated';
-    const you = cur != null ? `You: ≈ ${ord(cur + 1)} lane from left (estimate)` : `Your lane: unknown${f && f.acc ? ' (GPS ±' + Math.round(f.acc * 3.28) + ' ft)' : ''}`;
-    $('laneSrc').textContent = src + ' · ' + you;
-  }
   const key = show ? [k, now ? 1 : 0, cur, LD.ver].join('|') : 'x';
   if (key === laneKey) return;
   laneKey = key;
-  if (!show) { box.classList.add('hidden'); info.classList.add('hidden'); box.innerHTML = ''; return; }
+  if (!show) { box.classList.add('hidden'); box.innerHTML = ''; return; }
   const mod = R.steps[k].maneuver.modifier || 'straight';
   box.innerHTML = g.bar.map((b, j) => `<div class="lane${b.ok ? ' ok' : ''}${j === cur ? ' cur' : ''}">${laneSVG({ indications: b.ind, valid: b.ok }, mod)}${g.exitOnly[j] ? '<i class="xonly">EXIT ONLY</i>' : ''}${j === cur ? '<i class="me">▲</i>' : ''}</div>`).join('');
   box.classList.toggle('now', now);
   box.classList.toggle('est', g.conf !== 'confirmed');
-  box.classList.remove('hidden'); info.classList.remove('hidden');
+  box.classList.remove('hidden');
+}
+/* Always-on lane line at the top of the screen */
+function renderLaneInfo(k, dTurn, f, si, segI, stageAdvice, g) {
+  const info = $('laneInfo');
+  if (travel !== 'drive') { info.classList.add('hidden'); return; }
+  let tip = '', src = '';
+  const b = R.best && R.best[segI];
+  if (si && si.n && b != null) {
+    const n = si.n;
+    tip = stageAdvice || (n === 1 ? 'Single lane' : 'Use the ' + laneName(b, n));
+    const why = reasonText(k, dTurn);
+    if (!stageAdvice && why) tip += ' \u00b7 ' + why;
+    const cur = LE.conf && LE.lane != null && LE.n === n ? LE.lane : null;
+    const you = cur != null ? (cur === b ? 'You\u2019re in it \u2713 (estimate)' : 'You: \u2248 ' + laneName(cur, n) + ' (estimate)')
+      : 'Your lane: unknown' + (f && f.acc ? ' (GPS \u00b1' + Math.round(f.acc * 3.28) + ' ft)' : '');
+    src = n + ' lane' + (n > 1 ? 's' : '') + (si.conf === 'confirmed' ? ' (map data)' : ' (estimated count)') +
+      (g && !g.all && g.conf === 'estimated' ? ' \u00b7 turn lane estimated' : '') + ' \u00b7 ' + you;
+  } else {
+    const sd = turnSide(k), why = reasonText(k, dTurn);
+    tip = sd && dTurn < 1600 ? 'Keep ' + sd + ' \u00b7 ' + why : why ? 'Stay on route \u00b7 ' + why : '';
+    src = LD.loading ? 'Loading lane data\u2026' : 'No lane data for this road';
+  }
+  $('laneTip').textContent = tip; $('laneSrc').textContent = src;
+  info.classList.toggle('hidden', !tip);
 }
 
 /* ---------- Green exit sign ---------- */
@@ -1522,6 +1635,7 @@ function navUpdate(f) {
     }
   }
   renderLaneBar(k, dTurn, f, advice);
+  renderLaneInfo(k, dTurn, f, walk ? null : si, segI, advice, g);
   renderExitSign(k, dTurn);
   if (!walk) renderLaneArrows(k);
   renderTurnArrow(k, dTurn, far);
@@ -1536,9 +1650,8 @@ function navUpdate(f) {
   let offM;
   if (!on) offM = 0;
   else if (lanesKnown) {
-    const rec = R.rec && R.rec[segI];
-    const j = LE.conf && LE.lane != null ? LE.lane : rec ? (rec[0] + rec[rec.length - 1]) / 2 : (si.n - 1) / 2;
-    offM = laneCentre(si, j) * 3.6;
+    if (LE.conf && LE.lane != null) offM = laneCentre(si, LE.lane) * 3.6;
+    else offM = (R.bestS && R.bestS[segI] != null ? R.bestS[segI] : laneCentre(si, (si.n - 1) / 2)) * 3.6;
   } else offM = R.offs[segI] * 3.6;
   carOffS = carOffS == null ? offM : carOffS + (offM - carOffS) * 0.35;
   const carPos = on ? shiftLL(pos, s.bearing, carOffS) : pos;
@@ -1611,11 +1724,8 @@ function startSim() {
     if (travel === 'drive' && si && si.n) {
       if (simLane == null) simLane = Math.max(0, Math.floor((si.n - 1) / 2));
       simLane = Math.min(simLane, si.n - 1);
-      const rec = R.rec && R.rec[i];
-      if (rec && !rec.includes(simLane) && Date.now() - simLaneT > 2200) {
-        const tgt = rec.reduce((x, y) => Math.abs(y - simLane) < Math.abs(x - simLane) ? y : x);
-        simLane += Math.sign(tgt - simLane); simLaneT = Date.now();
-      }
+      const tgt = R.best && R.best[i];
+      if (tgt != null && tgt !== simLane && Date.now() - simLaneT > 2200) { simLane += Math.sign(tgt - simLane); simLaneT = Date.now(); }
       latM = laneCentre(si, simLane) * 3.6;
     } else simLane = null;
     const pt = latM ? shiftLL(p.pt, p.bearing, latM) : p.pt;
