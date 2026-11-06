@@ -100,6 +100,29 @@
   #walkOn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 100px);z-index:7;background:var(--blue);color:#fff;
     font-weight:800;font-size:17px;padding:15px 24px;border-radius:30px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   body.walk #speed{display:none!important}
+  .themefab{bottom:calc(var(--sb) + 156px)!important}
+  .lane{position:relative}
+  .lane.cur{box-shadow:inset 0 0 0 2px #ffd34d}
+  .lane .me{position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;color:#ffd34d;line-height:1}
+  .lane .xonly{position:absolute;top:1px;left:0;right:0;font-style:normal;font-size:7.5px;font-weight:900;color:#111;background:#ffd34d;border-radius:4px;line-height:1.1;padding:1px 0;text-align:center}
+  #lanes.est .lane.ok{border-style:dashed}
+  #laneInfo{background:#0a4a33;padding:0 12px 9px;text-align:center}
+  #laneTip{font-size:17px;font-weight:800;color:#fff}
+  #laneSrc{font-size:11.5px;color:#a8d8c2;margin-top:2px}
+  #bSign{background:#0c5d40;padding:8px 10px 10px;display:flex;justify-content:center}
+  .xsign{position:relative;background:#00703c;border:2.5px solid #fff;border-radius:9px;padding:8px 16px 7px;min-width:62%;text-align:center;color:#fff;
+    box-shadow:0 0 0 2px #00703c}
+  .xsign .xtab{position:absolute;top:-13px;right:10px;background:#00703c;border:2px solid #fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:900;letter-spacing:.5px}
+  .xsign.left .xtab{right:auto;left:10px}
+  .xref{font-size:14px;font-weight:800;letter-spacing:.3px}
+  .xdest{font-size:17px;font-weight:700;line-height:1.2}
+  #limit{position:fixed;left:16px;bottom:calc(var(--sb) + 176px);z-index:5;width:56px;padding:5px 0 4px;background:#fff;color:#111;
+    border:2.5px solid #111;border-radius:7px;display:flex;flex-direction:column;align-items:center;font-size:9px;font-weight:800;line-height:1.05;
+    box-shadow:0 0 0 2px #fff,0 6px 18px rgba(0,0,0,.5)}
+  #limit b{font-size:25px;line-height:1;margin-top:2px}
+  #limit.over{box-shadow:0 0 0 3px #e5484d,0 0 18px rgba(229,72,77,.8)}
+  body.walk #limit{display:none!important}
+  body.laneunk .car{opacity:.82}
   @keyframes lanePulse{50%{transform:scale(1.08);box-shadow:0 0 14px rgba(120,190,255,.9)}}
 
   #navBar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);display:flex;align-items:center;gap:10px;
@@ -168,6 +191,8 @@
   </div>
   <div id="bThen" class="b-then hidden"></div>
   <div id="lanes" class="hidden"></div>
+  <div id="laneInfo" class="hidden"><div id="laneTip"></div><div id="laneSrc"></div></div>
+  <div id="bSign" class="hidden"></div>
 </div>
 
 <div id="navBar" class="hidden">
@@ -177,8 +202,10 @@
   <button id="endBtn" class="btn end">End</button>
 </div>
 
+<div id="limit" class="hidden"><span>SPEED</span><span>LIMIT</span><b id="limVal"></b></div>
 <div id="speed" class="hidden"><div id="spVal">0</div><div>MPH</div></div>
 <button id="recenter" class="hidden">⦿ Re-center</button>
+<button id="themeFab" class="fab modefab themefab" aria-label="Day or night"><span id="themeIco">🌓</span><small id="themeTxt">Auto</small></button>
 <button id="modeFab" class="fab modefab" aria-label="Car or walking"><span id="modeIco">🚗</span><small id="modeTxt">Car</small></button>
 <button id="locBtn" class="fab" aria-label="My location">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="#2f8cff"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"/></svg>
@@ -486,6 +513,13 @@ function renderLanes(k, dTurn, far, near) {
 const ROUTE_W = (k, minPx) => ['interpolate', ['exponential', 2], ['zoom'], 8, minPx * 0.7, 13, minPx, 16, Math.max(minPx * 0.9, LANE16 * k), 20, LANE20 * k];
 const ROUTE_OFF = ['interpolate', ['exponential', 2], ['zoom'], 13, 0, 16, ['*', LANE16, ['coalesce', ['get', 'off'], 0]], 20, ['*', LANE20, ['coalesce', ['get', 'off'], 0]]];
 let turnKey = '';
+function laneOffAt(i) {
+  const si = R.seg && R.seg[i];
+  if (!si || !si.n) return R.offs[i];
+  const rec = R.rec && R.rec[i];
+  const j = rec ? (rec[0] + rec[rec.length - 1]) / 2 : (si.n - 1) / 2;
+  return laneCentre(si, j);
+}
 function renderTurnArrow(k, dTurn, far) {
   const st = R.steps[k];
   const show = st && dTurn < Math.max(far, 500) && st.maneuver.type !== 'arrive' && st.maneuver.type !== 'depart'
@@ -499,7 +533,7 @@ function renderTurnArrow(k, dTurn, far) {
   const coords = [pointAt(a).pt];
   for (let i = 0; i < R.cum.length; i++) if (R.cum[i] > a && R.cum[i] < b) coords.push(R.c[i]);
   const end = pointAt(b); coords.push(end.pt);
-  const oIn = R.offs[segAt(R.starts[k] - 3)], oOut = R.offs[segAt(b - 1)];
+  const oIn = laneOffAt(segAt(R.starts[k] - 3)), oOut = laneOffAt(segAt(b - 1));
   map.getSource('turn').setData({ type: 'Feature', properties: { off: oIn }, geometry: { type: 'LineString', coordinates: coords } });
   map.getSource('turnhead').setData({ type: 'Feature', properties: { b: end.bearing }, geometry: { type: 'Point', coordinates: shiftLL(end.pt, end.bearing, oOut * 3.6) } });
 }
@@ -577,12 +611,12 @@ const cleanQ = q => q.toLowerCase().replace(/\b(near me|nearby|close by|closest|
 const reEsc = t => t.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
 function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]); }
 
-async function overpass(query) {
+async function overpass(query, ms) {
   let lastErr;
   for (const url of OVERPASS) {
     try {
       const r = await withTimeout(fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }), 14000);
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }), ms || 14000);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return (await r.json()).elements || [];
     } catch (e) { lastErr = e; }
@@ -804,8 +838,15 @@ function routeFC(i0, pos) {
 function setRoute(rt) {
   R = prepare(rt);
   computeOffsets();
-  lastSnapSeg = 0; lastAlong = 0; announced = {}; laneKey = ''; turnKey = '';
-  map.getSource('route').setData(routeFC(0));
+  R.seg = new Array(R.c.length - 1).fill(null);
+  LD.fetchedTo = 0; LD.failAt = 0; LD.ver++;
+  if (travel === 'drive' && LD.ways.size) matchRange(0, R.c.length - 1);
+  computeGuidance();
+  resetLE(); carOffS = null;
+  lastSnapSeg = 0; lastAlong = 0; announced = {}; laneKey = ''; turnKey = ''; arrowKey = ''; signKey = '';
+  if (map.getSource('arrows')) map.getSource('arrows').setData({ type: 'FeatureCollection', features: [] });
+  buildRouteData(0, true);
+  loadLaneData(0);
 }
 function snap(lon, lat) {
   const c = R.c, n = c.length, kx = 111320 * Math.cos(toRad(lat)), ky = 110540;
@@ -816,7 +857,7 @@ function snap(lon, lat) {
       const dx = (c[i + 1][0] - c[i][0]) * kx, dy = (c[i + 1][1] - c[i][1]) * ky, L2 = dx * dx + dy * dy;
       let t = L2 ? -(ax * dx + ay * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
       const d = Math.hypot(ax + t * dx, ay + t * dy);
-      if (!best || d < best.d) best = { i, t, d };
+      if (!best || d < best.d) best = { i, t, d, qx: -(ax + t * dx), qy: -(ay + t * dy), dx, dy };
     }
     return best;
   };
@@ -825,7 +866,8 @@ function snap(lon, lat) {
   lastSnapSeg = b.i;
   const i = b.i;
   const pt = [c[i][0] + (c[i + 1][0] - c[i][0]) * b.t, c[i][1] + (c[i + 1][1] - c[i][1]) * b.t];
-  return { i, d: b.d, along: R.cum[i] + (R.cum[i + 1] - R.cum[i]) * b.t, pt, bearing: bearing(c[i], c[i + 1]) };
+  const cross = b.dx * b.qy - b.dy * b.qx;
+  return { i, d: b.d, lat: cross > 0 ? -b.d : b.d, along: R.cum[i] + (R.cum[i + 1] - R.cum[i]) * b.t, pt, bearing: bearing(c[i], c[i + 1]) };
 }
 function pointAt(d) {
   const cum = R.cum, c = R.c;
@@ -836,6 +878,411 @@ function pointAt(d) {
   return { pt: [c[lo][0] + (c[hi][0] - c[lo][0]) * t, c[lo][1] + (c[hi][1] - c[lo][1]) * t], bearing: bearing(c[lo], c[hi]) };
 }
 function stepAt(d) { let k = 0; for (let i = 0; i < R.starts.length; i++) if (R.starts[i] <= d) k = i; return k; }
+
+/* ---------- Real lane data: OpenStreetMap (Overpass) matched to the route ---------- */
+// Each route segment gets: n lanes in our direction, one-way?, centre turn lanes, turn:lanes, speed limit,
+// and whether the lane count is 'confirmed' (explicit tags) or 'estimated' (derived from total lanes).
+const LD = { grid: new Map(), ways: new Map(), info: new Map(), fetchedTo: 0, loading: false, failAt: 0, ver: 0 };
+const GRID = 0.002;
+function addWay(w) {
+  if (!w || LD.ways.has(w.id) || !w.geometry || w.geometry.length < 2) return;
+  const g = w.geometry.map(p => [p.lon, p.lat]);
+  const way = { id: w.id, t: w.tags || {}, g };
+  LD.ways.set(w.id, way);
+  for (let i = 0; i < g.length - 1; i++) {
+    const len = hav(g[i], g[i + 1]), n = Math.max(1, Math.ceil(len / 80)), keys = new Set();
+    for (let s = 0; s <= n; s++) {
+      const t = s / n, x = g[i][0] + (g[i + 1][0] - g[i][0]) * t, y = g[i][1] + (g[i + 1][1] - g[i][1]) * t;
+      keys.add(Math.floor(x / GRID) + ':' + Math.floor(y / GRID));
+    }
+    for (const k of keys) { let a = LD.grid.get(k); if (!a) LD.grid.set(k, a = []); a.push([way, i]); }
+  }
+}
+function parseSpeed(v) {
+  if (!v) return null;
+  const m = String(v).match(/(\d+)\s*(mph)?/i);
+  if (!m) return null;
+  return m[2] ? +m[1] : Math.round(+m[1] / 1.609);
+}
+function onewayOf(t) {
+  const o = t.oneway;
+  if (o === 'yes' || o === '1' || o === 'true') return 1;
+  if (o === '-1' || o === 'reverse') return -1;
+  if (o === 'no') return 0;
+  if (t.highway === 'motorway' || t.junction === 'roundabout' || t.junction === 'circular') return 1;
+  return 0;
+}
+function laneInfo(w, fwd) {
+  const key = w.id + (fwd ? 'f' : 'b');
+  if (LD.info.has(key)) return LD.info.get(key);
+  const t = w.t, ow = onewayOf(t) !== 0;
+  const info = { ow, n: null, bw: 0, conf: 'none', hw: t.highway || '', ref: t.ref || '',
+    ms: parseSpeed(ow ? t.maxspeed : (fwd ? (t['maxspeed:forward'] || t.maxspeed) : (t['maxspeed:backward'] || t.maxspeed))) };
+  const total = parseInt(t.lanes, 10);
+  let turn;
+  if (ow) {
+    if (total > 0) { info.n = total; info.conf = 'confirmed'; }
+    turn = t['turn:lanes'];
+  } else {
+    info.bw = Math.min(1, parseInt(t['lanes:both_ways'], 10) || 0);
+    const dirN = parseInt(fwd ? t['lanes:forward'] : t['lanes:backward'], 10);
+    if (dirN > 0) { info.n = dirN; info.conf = 'confirmed'; }
+    else if (total > 0) {
+      const rest = total - info.bw;
+      if (rest >= 2 && rest % 2 === 0) { info.n = rest / 2; info.conf = 'estimated'; }
+    }
+    turn = fwd ? t['turn:lanes:forward'] : t['turn:lanes:backward'];
+  }
+  if (turn) {
+    const parts = turn.split('|');
+    if (!info.n) { info.n = parts.length; info.conf = 'confirmed'; }
+    if (parts.length === info.n) info.turn = parts.map(x => x.split(';'));
+  }
+  if (info.n > 8) info.n = 8;
+  LD.info.set(key, info);
+  return info;
+}
+// Match route segments [i0, i1) to the nearest OSM way going the same direction
+function matchRange(i0, i1) {
+  if (!R || !R.seg) return;
+  i1 = Math.min(i1, R.c.length - 1);
+  for (let i = Math.max(0, i0); i < i1; i++) {
+    const a = R.c[i], b = R.c[i + 1], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], brg = bearing(a, b);
+    const kx = 111320 * Math.cos(toRad(m[1])), ky = 110540;
+    const cx = Math.floor(m[0] / GRID), cy = Math.floor(m[1] / GRID);
+    let best = null;
+    for (let gx = cx - 1; gx <= cx + 1; gx++) for (let gy = cy - 1; gy <= cy + 1; gy++) {
+      const cell = LD.grid.get(gx + ':' + gy);
+      if (!cell) continue;
+      for (const [w, j] of cell) {
+        const p = w.g[j], q = w.g[j + 1];
+        const ax = (p[0] - m[0]) * kx, ay = (p[1] - m[1]) * ky, dx = (q[0] - p[0]) * kx, dy = (q[1] - p[1]) * ky, L2 = dx * dx + dy * dy;
+        let t = L2 ? -(ax * dx + ay * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
+        const d = Math.hypot(ax + t * dx, ay + t * dy);
+        if (d > 12) continue;
+        const diff = Math.abs(((bearing(p, q) - brg + 540) % 360) - 180);
+        const fwd = diff < 40, rev = diff > 140;
+        if (!fwd && !rev) continue;
+        const ow = onewayOf(w.t);
+        if ((ow === 1 && !fwd) || (ow === -1 && fwd)) continue; // other carriageway
+        const score = d + (fwd ? diff : 180 - diff) * 0.15;
+        if (!best || score < best.s) best = { s: score, w, fwd };
+      }
+    }
+    R.seg[i] = best ? laneInfo(best.w, best.fwd) : null;
+  }
+}
+async function loadLaneData(fromD) {
+  if (!R || LD.loading || travel !== 'drive' || Date.now() - LD.failAt < 15000) return;
+  if (LD.fetchedTo >= R.total - 1 || LD.fetchedTo > fromD + 6000) return;
+  const myR = R, start = Math.max(LD.fetchedTo, fromD - 50), end = Math.min(R.total, start + 10000);
+  const pts = [];
+  for (let d = start; d < end; d += 120) { const p = pointAt(d).pt; pts.push(p[1].toFixed(5) + ',' + p[0].toFixed(5)); }
+  const pe = pointAt(end).pt; pts.push(pe[1].toFixed(5) + ',' + pe[0].toFixed(5));
+  LD.loading = true;
+  try {
+    const els = await overpass(`[out:json][timeout:25];way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street)$"](around:20,${pts.join(',')});out body geom;`, 28000);
+    els.forEach(addWay);
+    if (R !== myR) return;
+    matchRange(segAt(start), segAt(end) + 1);
+    LD.fetchedTo = end;
+    afterLaneData();
+  } catch (e) { LD.failAt = Date.now(); }
+  finally { LD.loading = false; }
+}
+function afterLaneData() {
+  LD.ver++;
+  computeGuidance();
+  laneKey = ''; arrowKey = ''; lastBuild.ver = null;
+  if (mode !== 'nav' && R) buildRouteData(0, true);
+}
+
+/* ---------- Lane guidance per maneuver ---------- */
+const sideOf = mod => (mod || '').includes('right') ? 'right' : (mod || '').includes('left') ? 'left' : null;
+function mapLanes(v, nFrom, nTo, side) {
+  if (nFrom === nTo) return v.slice();
+  const out = new Set();
+  for (const j of v) out.add(Math.max(0, Math.min(nTo - 1, side === 'left' ? j : j + (nTo - nFrom))));
+  return [...out].sort((a, b) => a - b);
+}
+const laneCentre = (si, j) => si.ow ? j + 0.5 - si.n / 2 : si.bw + j + 0.5;
+function computeGuidance() {
+  if (!R || !R.seg) return;
+  const N = R.c.length - 1;
+  R.rec = new Array(N).fill(null);
+  R.guide = {};
+  if (travel !== 'drive') return;
+  for (let k = 1; k < R.steps.length; k++) {
+    const st = R.steps[k], m = st.maneuver, mod = m.modifier || 'straight';
+    if (m.type === 'arrive' || m.type === 'depart') continue;
+    const si = R.seg[segAt(R.starts[k] - 15)];
+    const hw = !!(R.motor[k - 1] || (si && (si.hw === 'motorway' || si.hw === 'trunk' || (si.ms && si.ms >= 50))));
+    const L = lanesFor(k);
+    let bar = null, conf = 'none';
+    if (L && L.length > 1) {
+      bar = L.map(l => ({ ind: l.indications && l.indications.length ? l.indications : ['none'], ok: !!l.valid }));
+      conf = 'confirmed';
+    } else if (si && si.n > 1 && sideOf(mod) && !(m.type === 'continue' || m.type === 'new name') && mod !== 'straight') {
+      // no turn-lane data: only the lane COUNT is known → estimate the outside lane on the turn side
+      const sd = sideOf(mod);
+      bar = [];
+      for (let j = 0; j < si.n; j++) { const ok = sd === 'right' ? j === si.n - 1 : j === 0; bar.push({ ind: [ok ? mod : 'straight'], ok }); }
+      conf = 'estimated';
+    }
+    if (!bar) continue;
+    const v = bar.map((b, i) => b.ok ? i : -1).filter(i => i >= 0);
+    if (!v.length || v.length === bar.length) { R.guide[k] = { bar, conf, hw, all: true, v, nBar: bar.length, exitOnly: bar.map(() => false) }; continue; }
+    const side = v[0] === 0 ? 'left' : v[v.length - 1] === bar.length - 1 ? 'right' : 'middle';
+    const exitish = hw && (m.type === 'off ramp' || m.type === 'fork');
+    const exitOnly = bar.map(b => exitish && !b.ind.some(x => x === 'straight' || x === 'none'));
+    const zoneLen = hw ? 1600 : 350;
+    const zoneStart = Math.max(R.starts[k] - zoneLen, (R.starts[k - 1] || 0) + 5);
+    R.guide[k] = { bar, conf, hw, side, v, nBar: bar.length, exitOnly, zoneStart };
+    for (let i = segAt(zoneStart); i <= segAt(R.starts[k] + 3); i++) {
+      const s2 = R.seg[i];
+      if (s2 && s2.n) R.rec[i] = mapLanes(v, bar.length, s2.n, side === 'left' ? 'left' : 'right');
+    }
+  }
+}
+function stageList(g) { return g.hw ? [[3200, 'prep'], [1600, 'move'], [800, 'get'], [320, 'stay']] : [[500, 'prep'], [300, 'get'], [120, 'stay']]; }
+function stageText(g, step, stage, inGood) {
+  const m = step.maneuver, mod = m.modifier || '', sd = sideOf(mod);
+  const isExit = m.type === 'off ramp', isFork = m.type === 'fork';
+  const cnt = g.v.length, side = g.side;
+  const what = isExit ? 'exit' + (step.exits ? ' ' + step.exits.split(';')[0] : '') : 'fork';
+  const lanePh = side === 'middle' ? (cnt === 1 ? 'the marked middle lane' : 'the marked middle lanes') : (cnt === 1 ? `the ${side} lane` : `the ${side} ${cnt} lanes`);
+  if ((stage === 'move' || stage === 'get') && inGood) return 'You’re in a good lane — stay in it';
+  if (stage === 'prep') return (isExit && step.exits) ? `Prepare for ${what} on the ${sd || side}` : (isExit || isFork) ? `Prepare for the ${isExit ? 'exit' : 'fork'} on the ${sd || side}` : `Prepare to turn ${sd || mod}`;
+  if (stage === 'move') return side === 'middle' ? `Move toward ${lanePh}` : `Move toward the ${side} lanes`;
+  if (stage === 'get') return `Get into ${lanePh}`;
+  if (stage === 'stay') return isExit ? 'Stay in the exit lane' : (sd && !isFork ? `Stay in the ${sd}-turn lane` : `Stay in ${lanePh}`);
+  return instr(step);
+}
+
+/* ---------- Your lane: estimated from GPS only when accuracy allows ---------- */
+const LE = { lat: null, lane: null, n: null, cand: null, candN: 0, conf: false };
+function resetLE() { LE.lat = null; LE.lane = null; LE.n = null; LE.cand = null; LE.candN = 0; LE.conf = false; }
+function updateLaneEstimate(s, f, si) {
+  if (!si || !si.n || travel !== 'drive') { resetLE(); return; }
+  LE.lat = LE.lat == null ? s.lat : LE.lat * 0.6 + s.lat * 0.4;
+  if (f.acc == null || f.acc > 5) { LE.conf = false; LE.lane = null; LE.candN = 0; return; }
+  const x = LE.lat / 3.6;
+  let j = si.ow ? Math.floor(x + si.n / 2) : Math.floor(x - si.bw);
+  if (j < -1 || j > si.n) { LE.conf = false; LE.lane = null; return; } // not plausibly on this carriageway
+  j = Math.max(0, Math.min(si.n - 1, j));
+  if (LE.lane == null || si.n !== LE.n) { LE.lane = j; LE.n = si.n; LE.candN = 0; }
+  else if (j !== LE.lane) {
+    if (LE.cand === j) { if (++LE.candN >= 2) { LE.lane = j; LE.candN = 0; } }
+    else { LE.cand = j; LE.candN = 1; }
+  } else LE.candN = 0;
+  LE.conf = true;
+}
+
+/* ---------- Route drawing: lanes, markings, recommended-lane highlight ---------- */
+let lastBuild = { along: -1e9, ver: null }, recVisible = false;
+function buildRouteData(along, force) {
+  if (!R) return;
+  const ver = LD.ver + '|' + travel;
+  if (!force && Math.abs(along - lastBuild.along) < 60 && lastBuild.ver === ver) return;
+  lastBuild = { along, ver };
+  const feats = [], i0 = segAt(Math.max(0, along - 25)), iWin = segAt(Math.min(R.total, along + 3500));
+  let run = null; recVisible = false;
+  const flush = () => { if (run) emitRun(run, feats); run = null; };
+  for (let i = i0; i < R.c.length - 1; i++) {
+    const si = (i <= iWin && travel === 'drive' && R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
+    const rec = si && R.rec ? R.rec[i] : null;
+    const key = si ? `L${si.n}|${si.ow ? 1 : 0}|${si.bw}|${rec ? rec.join(',') : '-'}` : 'S' + R.offs[i];
+    if (!run || run.key !== key) { flush(); run = { key, si, rec, off: R.offs[i], c: [R.c[i]] }; }
+    run.c.push(R.c[i + 1]);
+  }
+  flush();
+  map.getSource('route').setData({ type: 'FeatureCollection', features: feats });
+}
+function emitRun(r, out) {
+  const g = { type: 'LineString', coordinates: r.c };
+  const F = p => out.push({ type: 'Feature', properties: p, geometry: g });
+  if (!r.si) { F({ k: 'simple', off: r.off }); return; }
+  const { n, ow, bw } = r.si;
+  const edgeL = ow ? -n / 2 : bw, edgeR = ow ? n / 2 : bw + n;
+  F({ k: 'car', off: (edgeL + edgeR) / 2, w: n + 0.14 });
+  for (let j = 0; j < n; j++) {
+    const st = r.rec ? (r.rec.includes(j) ? 2 : 0) : 1;
+    if (st === 2) recVisible = true;
+    F({ k: 'lane', off: laneCentre(r.si, j), st });
+  }
+  for (let b = 1; b < n; b++) F({ k: 'dash', off: edgeL + b });
+  F({ k: 'edgeR', off: edgeR });
+  F({ k: 'edgeY', off: edgeL, dbl: ow || bw ? 0 : 1 });
+}
+const LANES_W = (expr, minPx) => ['interpolate', ['exponential', 2], ['zoom'], 10, ['*', minPx * 0.5, expr], 14, ['*', Math.max(minPx, 1), expr], 16, ['*', LANE16, expr], 20, ['*', LANE20, expr]];
+const MARK_W = ['interpolate', ['exponential', 2], ['zoom'], 14, 0.4, 16, 0.7, 20, 4];
+function addLaneLayers() {
+  const src = 'route', before = 'building-3d';
+  const L = (id, filter, paint, layout) => map.addLayer({ id, type: 'line', source: src, filter, layout: Object.assign({ 'line-join': 'round' }, layout || {}), paint }, before);
+  L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2b3245', 'line-width': LANES_W(['get', 'w'], 1.5), 'line-offset': ROUTE_OFF });
+  L('rt-lane', ['==', ['get', 'k'], 'lane'], {
+    'line-color': '#2f8cff', 'line-width': LANES_W(0.9, 1.2), 'line-offset': ROUTE_OFF,
+    'line-opacity': ['match', ['get', 'st'], 2, 0.88, 1, 0.24, 0] });
+  L('rt-flow', ['all', ['==', ['get', 'k'], 'lane'], ['==', ['get', 'st'], 2]], {
+    'line-color': '#dff0ff', 'line-width': LANES_W(0.32, 0.6), 'line-offset': ROUTE_OFF, 'line-opacity': 0.75, 'line-dasharray': [0, 4, 3] });
+  L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-width': MARK_W, 'line-offset': ROUTE_OFF, 'line-dasharray': [4, 7] });
+  L('rt-edgeR', ['==', ['get', 'k'], 'edgeR'], { 'line-color': '#f2f5fb', 'line-width': MARK_W, 'line-offset': ROUTE_OFF });
+  L('rt-edgeY', ['==', ['get', 'k'], 'edgeY'], { 'line-color': '#f0c23b', 'line-width': MARK_W, 'line-offset': ROUTE_OFF,
+    'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 14, ['*', ['get', 'dbl'], 0.4], 16, ['*', ['get', 'dbl'], 0.8], 20, ['*', ['get', 'dbl'], 5]] });
+  map.addLayer({ id: 'route-casing', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'butt', 'line-join': 'round' },
+    paint: { 'line-color': '#0b3a86', 'line-width': ROUTE_W(1.0, 6), 'line-offset': ROUTE_OFF, 'line-opacity': 0.9 } }, before);
+  map.addLayer({ id: 'route-line', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'butt', 'line-join': 'round' },
+    paint: { 'line-color': '#3d9bff', 'line-width': ROUTE_W(0.78, 3.8), 'line-offset': ROUTE_OFF, 'line-opacity': 0.92 } }, before);
+  // painted lane arrows
+  map.addSource('arrows', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({ id: 'rt-arrows', type: 'symbol', source: 'arrows',
+    layout: { 'icon-image': ['get', 'icon'], 'icon-rotate': ['get', 'b'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map',
+      'icon-allow-overlap': true, 'icon-ignore-placement': true,
+      'icon-size': ['interpolate', ['exponential', 2], ['zoom'], 14, 0.02, 16, 0.075, 20, 1.2] } }, before);
+}
+// animated "flow" along recommended lanes (only runs while one is on screen)
+const DASH_SEQ = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
+  [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
+let flowStep = 0;
+setInterval(() => {
+  if (mode !== 'nav' || document.hidden || !recVisible || !map || !map.getLayer('rt-flow')) return;
+  flowStep = (flowStep + 1) % DASH_SEQ.length;
+  try { map.setPaintProperty('rt-flow', 'line-dasharray', DASH_SEQ[flowStep]); } catch (e) {}
+}, 90);
+
+/* painted arrow icons, drawn once per combination */
+const ARROW_ENDS = { straight: [24, 9, -90], right: [38, 18, 0], slight: [33, 13, -48.6], sharp: [33, 32, 46.6], uturn: [14, 30, 90] };
+function arrowKind(ind) {
+  if (!ind || ind === 'none' || ind === 'straight') return 'straight';
+  if (ind === 'uturn') return 'uturn';
+  if (ind.startsWith('slight') || ind.startsWith('merge')) return 'slight';
+  if (ind.startsWith('sharp')) return 'sharp';
+  return 'right';
+}
+function ensureArrowIcon(inds, on) {
+  const name = 'la-' + inds.join('_').replace(/\s/g, '-') + (on ? '-on' : '');
+  if (map.hasImage(name)) return name;
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 96;
+  const g = cv.getContext('2d');
+  const col = on ? '#ffffff' : 'rgba(235,240,250,0.55)';
+  for (const ind of inds) {
+    const kind = arrowKind(ind), mp = modPath(ind === 'none' ? 'straight' : ind), e = ARROW_ENDS[kind];
+    g.save();
+    if (mp.left) { g.translate(64, 0); g.scale(-1, 1); }
+    g.translate(3, 5); g.scale(1.2, 1.8);
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 4.2; g.lineCap = 'butt'; g.lineJoin = 'round';
+    g.stroke(new Path2D(mp.path));
+    const a = toRad(e[2]), ca = Math.cos(a), sa = Math.sin(a);
+    const P = (x, y) => [e[0] + x * ca - y * sa, e[1] + x * sa + y * ca];
+    const t = [P(6, 0), P(-3, 5.5), P(-3, -5.5)];
+    g.beginPath(); g.moveTo(t[0][0], t[0][1]); g.lineTo(t[1][0], t[1][1]); g.lineTo(t[2][0], t[2][1]); g.closePath(); g.fill();
+    g.restore();
+  }
+  map.addImage(name, g.getImageData(0, 0, 64, 96));
+  return name;
+}
+let arrowKey = '';
+function renderLaneArrows(k) {
+  const g = R.guide && R.guide[k];
+  const key = g && g.conf === 'confirmed' ? 'a' + k + '|' + LD.ver : 'x';
+  if (key === arrowKey) return;
+  arrowKey = key;
+  const feats = [];
+  if (key !== 'x') for (const back of [30, 85]) {
+    const d = R.starts[k] - back;
+    if (d < 0) continue;
+    const si = R.seg[segAt(d)];
+    if (!si || si.n !== g.nBar) continue;
+    const p = pointAt(d);
+    g.bar.forEach((b, j) => feats.push({ type: 'Feature', properties: { icon: ensureArrowIcon(b.ind, b.ok), b: p.bearing },
+      geometry: { type: 'Point', coordinates: shiftLL(p.pt, p.bearing, laneCentre(si, j) * 3.6) } }));
+  }
+  map.getSource('arrows').setData({ type: 'FeatureCollection', features: feats });
+}
+
+/* ---------- Lane bar in the banner ---------- */
+const ord = n => n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n] || 'th');
+function curBarLane(g) {
+  const si = R.seg && R.seg[segAt(lastAlong)];
+  if (!g || !LE.conf || LE.lane == null || !si || !si.n) return null;
+  return mapLanes([LE.lane], si.n, g.nBar, g.side === 'left' ? 'left' : 'right')[0];
+}
+function renderLaneBar(k, dTurn, f, advice) {
+  const g = R.guide && R.guide[k];
+  const box = $('lanes'), info = $('laneInfo');
+  const show = !!(g && !g.all && dTurn < (g.hw ? 3300 : 600));
+  const now = show && dTurn < (g.hw ? 500 : 150);
+  const cur = show ? curBarLane(g) : null;
+  $('banner').classList.toggle('close', !!(R.steps[k] && R.steps[k].maneuver.type !== 'arrive' && dTurn < (g && !g.all ? (g.hw ? 500 : 150) : 200)));
+  if (show) {
+    $('laneTip').textContent = advice || '';
+    const src = g.conf === 'confirmed' ? 'Lanes from map data' : 'Lane count from map · turn lanes estimated';
+    const you = cur != null ? `You: ≈ ${ord(cur + 1)} lane from left (estimate)` : `Your lane: unknown${f && f.acc ? ' (GPS ±' + Math.round(f.acc * 3.28) + ' ft)' : ''}`;
+    $('laneSrc').textContent = src + ' · ' + you;
+  }
+  const key = show ? [k, now ? 1 : 0, cur, LD.ver].join('|') : 'x';
+  if (key === laneKey) return;
+  laneKey = key;
+  if (!show) { box.classList.add('hidden'); info.classList.add('hidden'); box.innerHTML = ''; return; }
+  const mod = R.steps[k].maneuver.modifier || 'straight';
+  box.innerHTML = g.bar.map((b, j) => `<div class="lane${b.ok ? ' ok' : ''}${j === cur ? ' cur' : ''}">${laneSVG({ indications: b.ind, valid: b.ok }, mod)}${g.exitOnly[j] ? '<i class="xonly">EXIT ONLY</i>' : ''}${j === cur ? '<i class="me">▲</i>' : ''}</div>`).join('');
+  box.classList.toggle('now', now);
+  box.classList.toggle('est', g.conf !== 'confirmed');
+  box.classList.remove('hidden'); info.classList.remove('hidden');
+}
+
+/* ---------- Green exit sign ---------- */
+let signKey = '';
+function renderExitSign(k, dTurn) {
+  const st = R.steps[k], g = R.guide && R.guide[k];
+  const m = st && st.maneuver;
+  const ok = st && (m.type === 'off ramp' || m.type === 'fork') && (st.exits || st.destinations) && (R.motor[k - 1] || (g && g.hw)) && dTurn < 4000;
+  const key = ok ? 's' + k : 'x';
+  if (key === signKey) return;
+  signKey = key;
+  const el = $('bSign');
+  if (!ok) { el.classList.add('hidden'); return; }
+  const dest = (st.destinations || '').split(':');
+  const refs = dest.length > 1 ? dest[0] : '', names = dest.length > 1 ? dest.slice(1).join(':') : dest[0];
+  const sd = sideOf(m.modifier) || 'right';
+  el.innerHTML = `<div class="xsign ${sd}">${st.exits ? `<span class="xtab">EXIT ${esc(st.exits.split(';')[0])}</span>` : ''}${refs ? `<div class="xref">${esc(refs.replace(/\bI (\d)/g, 'I-$1'))}</div>` : ''}<div class="xdest">${esc(names.split(',').slice(0, 2).join(' · ').trim() || (m.type === 'fork' ? 'Keep ' + sd : 'Exit ' + sd))}</div></div>`;
+  el.classList.remove('hidden');
+}
+
+/* ---------- Day / night ---------- */
+const THEMES = {
+  night: { bg: '#0e1626', res: '#111c30', park: '#12291f', wood: '#112419', water: '#132a4a', bld: '#223050', path: '#4a5b80', side: '#394259', edge: '#a7b0c4',
+    road: { service: '#232a39', minor: '#283041', tertiary: '#2c3446', secondary: '#2e3749', major: '#323b4f', motorway: '#363f55' }, asphalt: '#2b3245',
+    label: '#cfd8ea', halo: '#0e1626', place: '#e7ecf7',
+    poi: ['match', ['get', 'class'], ['shop', 'clothing_store', 'grocery'], '#ffd38a', ['restaurant', 'fast_food', 'cafe'], '#ffa9a9', '#b9c7e3'] },
+  day: { bg: '#e8ecf0', res: '#e0e5eb', park: '#cde5c6', wood: '#c2ddb9', water: '#9cc8ef', bld: '#d2d7df', path: '#98a4bb', side: '#cdd2db', edge: '#ffffff',
+    road: { service: '#8d95a5', minor: '#828a9a', tertiary: '#7b8391', secondary: '#757d8c', major: '#6e7685', motorway: '#676f7e' }, asphalt: '#5f6776',
+    label: '#1d2433', halo: '#ffffff', place: '#111827',
+    poi: ['match', ['get', 'class'], ['shop', 'clothing_store', 'grocery'], '#8a5200', ['restaurant', 'fast_food', 'cafe'], '#a3262a', '#3c4a66'] }
+};
+let themeMode = 'auto', themeNow = null;
+try { themeMode = localStorage.getItem('rv_theme') || 'auto'; } catch (e) {}
+function wantedTheme() { if (themeMode !== 'auto') return themeMode; const h = new Date().getHours(); return h >= 7 && h < 18 ? 'day' : 'night'; }
+function applyTheme() {
+  const name = wantedTheme();
+  if (!map || name === themeNow) return;
+  const t = THEMES[name];
+  const set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch (e) {} };
+  set('bg', 'background-color', t.bg); set('landuse', 'fill-color', t.res); set('park', 'fill-color', t.park);
+  set('landcover', 'fill-color', t.wood); set('water', 'fill-color', t.water); set('building-3d', 'fill-extrusion-color', t.bld);
+  set('road-path', 'line-color', t.path); set('sidewalk', 'line-color', t.side); set('rt-car', 'line-color', t.asphalt);
+  for (const gr of ROAD_GROUPS) { set('road-' + gr[0], 'line-color', t.road[gr[0]]); set('edge-' + gr[0], 'line-color', t.edge); }
+  set('road-label', 'text-color', t.label); set('road-label', 'text-halo-color', t.halo);
+  set('place-label', 'text-color', t.place); set('place-label', 'text-halo-color', t.halo);
+  set('poi-label', 'text-color', t.poi); set('poi-label', 'text-halo-color', t.halo);
+  themeNow = name;
+  document.body.dataset.theme = name;
+}
+function syncThemeUI() {
+  $('themeIco').textContent = themeMode === 'day' ? '☀️' : themeMode === 'night' ? '🌙' : '🌓';
+  $('themeTxt').textContent = themeMode === 'auto' ? 'Auto' : themeMode === 'day' ? 'Day' : 'Night';
+}
+setInterval(applyTheme, 5 * 60 * 1000);
 
 /* ---------- Flow: pick → preview → drive ---------- */
 async function pickDest(place, fromLL) {
@@ -886,6 +1333,12 @@ function syncModeUI() {
   $('modeNav').textContent = w ? '🚗' : '🚶';
   $('mDrive').classList.toggle('on', !w); $('mWalk').classList.toggle('on', w);
 }
+$('themeFab').onclick = () => {
+  themeMode = themeMode === 'auto' ? 'day' : themeMode === 'day' ? 'night' : 'auto';
+  try { localStorage.setItem('rv_theme', themeMode); } catch (e) {}
+  syncThemeUI(); applyTheme();
+  toast(themeMode === 'auto' ? '🌓 Auto: day map 7am–6pm, night map after dark' : themeMode === 'day' ? '☀️ Day map' : '🌙 Night map', 2000);
+};
 $('modeFab').onclick = () => {
   travel = travel === 'walk' ? 'drive' : 'walk';
   if (travel === 'walk') askCompass();
@@ -954,6 +1407,12 @@ $('locBtn').onclick = () => {
   else toast('No GPS yet — allow Location for this site in Safari.');
 };
 
+function hideLaneUI() {
+  ['laneInfo', 'limit', 'bSign'].forEach(id => $(id).classList.add('hidden'));
+  signKey = 'x'; arrowKey = 'x'; recVisible = false; resetLE();
+  document.body.classList.remove('laneunk');
+  if (map.getSource('arrows')) map.getSource('arrows').setData({ type: 'FeatureCollection', features: [] });
+}
 function endTrip() {
   stopSim();
   R = null; dest = null; arrived = false;
@@ -962,6 +1421,7 @@ function endTrip() {
   const empty = { type: 'FeatureCollection', features: [] };
   ['route', 'turn', 'turnhead'].forEach(s => map.getSource(s) && map.getSource(s).setData(empty));
   $('lanes').classList.add('hidden'); $('banner').classList.remove('close'); laneKey = ''; turnKey = '';
+  hideLaneUI();
   destMarker.remove();
   releaseWake();
   try { speechSynthesis.cancel(); } catch (e) {}
@@ -1027,12 +1487,44 @@ function navUpdate(f) {
   $('nbSub').textContent = fmtDur(tLeft) + ' · ' + rd.v + ' ' + rd.u;
   $('spVal').textContent = Math.round((f.speed || 0) * 2.237);
 
-  // voice
+  // lane data + your lane
+  const segI = Math.min(s.i, R.seg.length - 1), si = R.seg[segI];
+  if (!walk) { loadLaneData(along); updateLaneEstimate(s, f, on ? si : null); }
+  const g = !walk && R.guide ? R.guide[k] : null;
+  const lanesKnown = !!(si && si.n && !walk);
+  document.body.classList.toggle('laneunk', lanesKnown && !LE.conf);
+
+  // speed limit sign (from map data)
+  const lim = !walk && si && si.ms;
+  $('limit').classList.toggle('hidden', !lim);
+  if (lim) { $('limVal').textContent = lim; $('limit').classList.toggle('over', (f.speed || 0) * 2.237 > lim + 5); }
+
+  // voice + progressive lane guidance
   const sp = Math.max(f.speed || 0, walk ? 1.4 : 9);
   const far = walk ? 60 : Math.max(400, sp * 35), near = walk ? 15 : Math.max(90, sp * 9);
-  renderLanes(k, dTurn, far, near);
-  renderTurnArrow(k, dTurn, far);
   const a = announced[k] || (announced[k] = {});
+  let advice = '';
+  if (g && !g.all) {
+    const sc = g.hw ? Math.max(0.6, Math.min(1.3, (f.speed || 25) / 29)) : 1;
+    let stage = null;
+    for (const [dist, nm] of stageList(g)) if (dTurn <= dist * sc) stage = nm;
+    const cur = curBarLane(g), inGood = cur != null && g.v.includes(cur);
+    if (stage) {
+      advice = stageText(g, step, stage, inGood);
+      if (!a['s_' + stage] && dTurn > near) {
+        a['s_' + stage] = 1; a.far = 1;
+        const lead = stage === 'prep' || stage === 'move' ? 'In ' + spokenDist(dTurn) + ', ' : '';
+        say(lead + (lead ? advice.charAt(0).toLowerCase() + advice.slice(1) : advice));
+      }
+      if (stage === 'stay' && cur != null && Math.min(...g.v.map(x => Math.abs(x - cur))) >= 2 && !a.unsafe) {
+        a.unsafe = 1; setTimeout(() => say('If you can’t move over safely, carry on. I’ll find a new route.'), 2500);
+      }
+    }
+  }
+  renderLaneBar(k, dTurn, f, advice);
+  renderExitSign(k, dTurn);
+  if (!walk) renderLaneArrows(k);
+  renderTurnArrow(k, dTurn, far);
   if (dTurn <= far && dTurn > near * 1.6 && !a.far) {
     a.far = 1;
     const hint = laneHint(lanesFor(k));
@@ -1040,18 +1532,29 @@ function navUpdate(f) {
   }
   if (dTurn <= near && !a.near) { a.near = a.far = 1; say(instr(step) + (nxt && (R.starts[k + 1] - R.starts[k]) < 250 ? ', then ' + instr(nxt) : '')); }
 
-  // car + remaining route line
-  const carPos = on ? shiftLL(pos, s.bearing, R.offs[Math.min(s.i, R.offs.length - 1)] * 3.6) : pos;
+  // car sits in its (estimated or recommended) lane; route redrawn every ~60 m
+  let offM;
+  if (!on) offM = 0;
+  else if (lanesKnown) {
+    const rec = R.rec && R.rec[segI];
+    const j = LE.conf && LE.lane != null ? LE.lane : rec ? (rec[0] + rec[rec.length - 1]) / 2 : (si.n - 1) / 2;
+    offM = laneCentre(si, j) * 3.6;
+  } else offM = R.offs[segI] * 3.6;
+  carOffS = carOffS == null ? offM : carOffS + (offM - carOffS) * 0.35;
+  const carPos = on ? shiftLL(pos, s.bearing, carOffS) : pos;
   carMarker.setLngLat(carPos).setRotation(lastHeading);
   if (!carMarker._map) carMarker.addTo(map);
-  if (on) map.getSource('route').setData(routeFC(s.i, pos));
+  if (on) buildRouteData(along, false);
 
-  // camera
+  // camera: closer and steeper near lane-critical junctions
   if (following) {
-    map.easeTo({ center: carPos, bearing: lastHeading, pitch: walk ? 50 : 62, zoom: walk ? 18.6 : speedZoom(f.speed),
+    let z = walk ? 18.6 : speedZoom(f.speed), pitch = walk ? 50 : 62;
+    if (g && !g.all && dTurn < (g.hw ? 700 : 220)) { z = Math.min(18.3, z + 0.6); pitch = 66; }
+    map.easeTo({ center: carPos, bearing: lastHeading, pitch, zoom: z,
       duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * 0.2] });
   }
 }
+let carOffS = null;
 let finderAnnounced = false;
 function updateFinder(f, toDest, show) {
   const box = $('finder');
@@ -1090,20 +1593,33 @@ function arrive(pos) {
   const empty = { type: 'FeatureCollection', features: [] };
   ['route', 'turn', 'turnhead'].forEach(s => map.getSource(s).setData(empty));
   $('lanes').classList.add('hidden'); $('banner').classList.remove('close'); laneKey = 'x'; turnKey = 'x';
+  hideLaneUI();
 }
 
 /* ---------- Simulated test drive ---------- */
 function startSim() {
   stopSim();
-  let d = 0;
+  let d = 0, simLane = null, simLaneT = 0;
   sim = setInterval(() => {
     if (!R) return stopSim();
     const st = R.steps[stepAt(d)];
     let v = st && st.duration > 0 ? st.distance / st.duration : 13;
     v = travel === 'walk' ? 1.4 : Math.min(Math.max(v, 7), 31);
     d += v * 0.25 * (travel === 'walk' ? 4 : 1.5);
-    const p = pointAt(d);
-    navUpdate({ lon: p.pt[0], lat: p.pt[1], speed: v, heading: p.bearing, acc: 5, sim: true });
+    const p = pointAt(d), i = segAt(d), si = R.seg && R.seg[i];
+    let latM = 0;
+    if (travel === 'drive' && si && si.n) {
+      if (simLane == null) simLane = Math.max(0, Math.floor((si.n - 1) / 2));
+      simLane = Math.min(simLane, si.n - 1);
+      const rec = R.rec && R.rec[i];
+      if (rec && !rec.includes(simLane) && Date.now() - simLaneT > 2200) {
+        const tgt = rec.reduce((x, y) => Math.abs(y - simLane) < Math.abs(x - simLane) ? y : x);
+        simLane += Math.sign(tgt - simLane); simLaneT = Date.now();
+      }
+      latM = laneCentre(si, simLane) * 3.6;
+    } else simLane = null;
+    const pt = latM ? shiftLL(p.pt, p.bearing, latM) : p.pt;
+    navUpdate({ lon: pt[0], lat: pt[1], speed: v, heading: p.bearing, acc: 3, sim: true });
   }, 250);
 }
 function stopSim() { if (sim) { clearInterval(sim); sim = null; } }
@@ -1158,11 +1674,9 @@ function init() {
 
   map.on('load', () => {
     map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'butt', 'line-join': 'round' },
-      paint: { 'line-color': '#0b3a86', 'line-width': ROUTE_W(1.0, 6), 'line-offset': ROUTE_OFF, 'line-opacity': 0.9 } }, 'building-3d');
-    map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-cap': 'butt', 'line-join': 'round' },
-      paint: { 'line-color': '#3d9bff', 'line-width': ROUTE_W(0.78, 3.8), 'line-offset': ROUTE_OFF, 'line-opacity': 0.92 } }, 'building-3d');
+    addLaneLayers();
     addTurnLayers();
+    applyTheme(); syncThemeUI();
     const L = $('loading'); L.style.opacity = 0; setTimeout(() => L.remove(), 450);
   });
   const userMove = e => { if (e.originalEvent && mode === 'nav') { following = false; $('recenter').classList.remove('hidden'); } };
