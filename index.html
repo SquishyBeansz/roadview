@@ -68,8 +68,11 @@
   .sim input{width:20px;height:20px;accent-color:var(--blue)}
 
   /* nav banner */
-  #banner{position:fixed;left:10px;right:10px;top:calc(var(--st) + 10px);z-index:6;border-radius:18px;overflow:hidden;
-    box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  #banner{position:fixed;left:10px;right:10px;top:calc(var(--st) + 10px);z-index:6;border-radius:20px;overflow:hidden;
+    box-shadow:0 12px 34px rgba(0,0,0,.5);animation:dropIn .35s ease-out}
+  @keyframes dropIn{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+  .b-main{background:linear-gradient(180deg,#15905f,#107a50)!important}
+  #banner.close .b-main{background:linear-gradient(180deg,#1cb378,#14975f)!important}
   .b-main{display:flex;align-items:center;gap:14px;background:var(--green);padding:14px 16px}
   .b-icon{flex:none;width:58px;height:58px}
   .b-icon svg{width:100%;height:100%}
@@ -100,7 +103,7 @@
   #walkOn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 100px);z-index:7;background:var(--blue);color:#fff;
     font-weight:800;font-size:17px;padding:15px 24px;border-radius:30px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   body.walk #speed{display:none!important}
-  .themefab{bottom:calc(var(--sb) + 156px)!important}
+  .fab.modefab.themefab{bottom:calc(var(--sb) + 156px)!important}
   .lane{position:relative}
   .lane.cur{box-shadow:inset 0 0 0 2px #ffd34d}
   .lane .me{position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;color:#ffd34d;line-height:1}
@@ -129,13 +132,26 @@
     padding:12px 14px calc(var(--sb) + 12px) 18px;border-radius:22px 22px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5)}
   .nb-left{flex:1;min-width:0}
   .nb-eta{font-size:24px;font-weight:800;color:#4ade80}
-  .nb-sub{font-size:15px;color:var(--sub);margin-top:2px}
+  .nb-sub{font-size:15px;color:var(--sub);margin-top:2px;font-weight:600}
+  .nb-eta small{font-size:13px;font-weight:700;color:var(--sub);margin-left:2px}
   .roundbtn{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.08);font-size:22px;display:grid;place-items:center}
 
   #speed{position:fixed;left:14px;bottom:calc(var(--sb) + 100px);z-index:5;width:66px;height:66px;border-radius:50%;
     background:#fff;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;
     box-shadow:0 6px 20px rgba(0,0,0,.5);font-size:11px;font-weight:700}
   #spVal{font-size:24px;font-weight:800;line-height:1}
+  .viewbtn{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:5;width:54px;height:54px;border-radius:16px;background:var(--panel);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.45);line-height:1;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.06)}
+  .viewbtn b{font-size:16px;font-weight:800;letter-spacing:.3px}
+  .viewbtn small{font-size:9.5px;color:var(--sub);margin-top:3px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  #roadPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 92px);z-index:5;max-width:64vw;display:flex;gap:7px;align-items:center;
+    background:var(--panel);border-radius:22px;padding:7px 14px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.45);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.06)}
+  #roadPill span{overflow:hidden;text-overflow:ellipsis}
+  #roadPill .pref{background:#fff;color:#111;border-radius:5px;padding:1px 6px;font-size:12px;font-weight:900;flex:none}
+  #roadPill .pref.i{background:#1f4fb4;color:#fff;box-shadow:inset 0 3px 0 #d0262f}
+  body:not(.nav) #roadPill{display:none!important}
   #autoZoom{position:fixed;right:14px;bottom:calc(var(--sb) + 156px);z-index:5;background:var(--panel);padding:10px 15px;
     border-radius:30px;font-weight:700;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#cfd8ea}
   #recenter{position:fixed;right:14px;bottom:calc(var(--sb) + 104px);z-index:5;background:var(--panel);padding:13px 18px;
@@ -207,6 +223,8 @@
 <div id="limit" class="hidden"><span>SPEED</span><span>LIMIT</span><b id="limVal"></b></div>
 <div id="speed" class="hidden"><div id="spVal">0</div><div>MPH</div></div>
 <button id="recenter" class="hidden">⦿ Re-center</button>
+<button id="viewBtn" class="viewbtn hidden" aria-label="Change view"></button>
+<div id="roadPill" class="hidden"></div>
 <button id="autoZoom" class="hidden">🔍 Auto zoom</button>
 <button id="themeFab" class="fab modefab themefab" aria-label="Day or night"><span id="themeIco">🌓</span><small id="themeTxt">Auto</small></button>
 <button id="modeFab" class="fab modefab" aria-label="Car or walking"><span id="modeIco">🚗</span><small id="modeTxt">Car</small></button>
@@ -229,107 +247,284 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
-/* ---------- Map style: simple dark "satnav" look from OpenFreeMap vector tiles ---------- */
+/* ---------- Map style v2: premium satnav look, built only from real OpenStreetMap data (OpenFreeMap tiles) ---------- */
 const NAME = ['coalesce', ['get', 'name:en'], ['get', 'name']];
 const isLine = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false];
-// Real-world scale: one 3.6 m lane in screen px (512px tiles, ~40°N)
+// Real-world scale: one 3.6 m lane in screen px (kept in step with latitude by setScale/applyScale)
 let LANE16 = 3.94, LANE20 = 63;
 const lanePx = (k, z12) => ['interpolate', ['exponential', 2], ['zoom'], 8, 0, 12, z12 == null ? 0 : z12, 16, ['*', LANE16, k], 20, ['*', LANE20, k]];
 const RAMP = ['==', ['coalesce', ['get', 'ramp'], 0], 1];
 const TWOWAY = ['==', ['coalesce', ['get', 'oneway'], 0], 0];
 const CLS = c => ['match', ['get', 'class'], c, true, false];
-const LEQ = { // road width in "lanes" (incl. shoulders)
+const BRUNNEL = b => ['==', ['coalesce', ['get', 'brunnel'], ''], b];
+const NOT_BR = ['!', ['match', ['coalesce', ['get', 'brunnel'], ''], ['bridge', 'tunnel'], true, false]];
+const LEQ = { // road width in "lanes" (incl. shoulders) – used only for the background road network
   motorway: ['case', RAMP, 1.5, 3.6],
   major: ['case', RAMP, 1.5, ['case', TWOWAY, 4.4, 2.6]],
   secondary: ['case', TWOWAY, 2.8, 2.0], tertiary: 2.4, minor: 2.1, service: 1.3, path: 0.55
 };
 function roadW(leq, z8, z12) { return ['interpolate', ['exponential', 2], ['zoom'], 8, z8, 12, z12, 16, ['max', z12 * 2, ['*', LANE16, leq]], 20, ['*', LANE20, leq]]; }
-function rl(id, classes, leq, color, z8, z12, more) {
-  return Object.assign({ id, type: 'line', source: 'omt', 'source-layer': 'transportation',
-    filter: ['all', isLine, CLS(classes)], layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': color, 'line-width': roadW(leq, z8, z12) } }, more || {});
-}
-const ROAD_GROUPS = [ // drawn bottom → top
-  ['service', ['service', 'track'], LEQ.service, '#232a39', 0, 0.6],
-  ['minor', ['minor'], LEQ.minor, '#283041', 0.3, 1.2],
-  ['tertiary', ['tertiary'], LEQ.tertiary, '#2c3446', 0.5, 1.6],
-  ['secondary', ['secondary'], LEQ.secondary, '#2e3749', 0.7, 2],
-  ['major', ['primary', 'trunk'], LEQ.major, '#323b4f', 1, 2.8],
-  ['motorway', ['motorway'], LEQ.motorway, '#363f55', 1.2, 3.4]
+const ROAD_GROUPS = [ // [id, classes, width, (unused), px@z8, px@z12] drawn bottom → top
+  ['service', ['service', 'track'], LEQ.service, 0, 0, 0.6],
+  ['minor', ['minor'], LEQ.minor, 0, 0.3, 1.2],
+  ['tertiary', ['tertiary'], LEQ.tertiary, 0, 0.5, 1.6],
+  ['secondary', ['secondary'], LEQ.secondary, 0, 0.7, 2],
+  ['major', ['primary', 'trunk'], LEQ.major, 0, 1, 2.8],
+  ['motorway', ['motorway'], LEQ.motorway, 0, 1.2, 3.4]
 ];
-function roadLayers() {
+const ALL_ROADS = ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'track'];
+const LEQ_ANY = ['match', ['get', 'class'], 'motorway', LEQ.motorway, ['primary', 'trunk'], LEQ.major, 'secondary', LEQ.secondary,
+  'tertiary', LEQ.tertiary, ['service', 'track'], LEQ.service, LEQ.minor];
+
+const PALETTES = {
+  night: { bg: '#0d1422', res: '#101a2b', comm: '#141b2d', ind: '#121928', hosp: '#1c1624', school: '#161a2b', cem: '#11201a',
+    park: '#0f251b', wood: '#0e2118', grass: '#10241a', farm: '#0f1a1e', sand: '#1b1c21', wet: '#0e1f22', ice: '#1b2333',
+    water: '#0f2442', waterLine: '#15335c', waterText: '#6a90c9', aero: '#141b2b', runway: '#283146',
+    bldFlat: '#172032', bldLo: '#1b2538', bldMid: '#22304a', bldHi: '#2c3d5e',
+    road: { motorway: ['#a3864e', '#3a4259'], major: ['#6c7a99', '#353d52'], secondary: ['#55617c', '#30384b'],
+      tertiary: ['#4a5570', '#2e3547'], minor: ['#39445e', '#2b3243'], service: ['#2b3345', '#262d3c'] },
+    casing: '#070c16', edge: '#a7b0c4', shadow: 'rgba(0,0,0,0.6)', tunnel: '#273043', rail: '#3b4458', railDash: '#1a2131',
+    label: '#d5ddeb', labelMinor: '#93a2bf', halo: '#0d1422', place: '#eef2fa', placeMinor: '#94a6c6', poiText: '#c6d1e6',
+    hsShadow: '#000000', hsHi: '#33445f', hsAccent: '#0d1422', path: '#4a5b80', side: '#2c3447', centre: '#d9b43a', asphalt: '#2b3245', light: 0.25 },
+  day: { bg: '#eef0f3', res: '#e7eaef', comm: '#f2ede7', ind: '#e9e7ef', hosp: '#f7e7ea', school: '#f0ebe0', cem: '#dfe9da',
+    park: '#cde7c4', wood: '#c1dfb6', grass: '#d2eac8', farm: '#eef1e1', sand: '#f2ead5', wet: '#d4eae5', ice: '#f4f8fc',
+    water: '#a6d0f4', waterLine: '#8dc0ee', waterText: '#3b74b3', aero: '#e3e5eb', runway: '#c1c6d0',
+    bldFlat: '#dde0e7', bldLo: '#dfe2e8', bldMid: '#d2d7e0', bldHi: '#c3c9d5',
+    road: { motorway: ['#f5c15a', '#7a8190'], major: ['#ffffff', '#7f879a'], secondary: ['#ffffff', '#858d9d'],
+      tertiary: ['#ffffff', '#8a92a1'], minor: ['#ffffff', '#9198a6'], service: ['#fbfbfc', '#9aa1ad'] },
+    casing: '#c7ccd6', edge: '#ffffff', shadow: 'rgba(30,40,60,0.35)', tunnel: '#d6dae2', rail: '#a3aab7', railDash: '#ffffff',
+    label: '#273041', labelMinor: '#5b677d', halo: '#ffffff', place: '#111827', placeMinor: '#4a5569', poiText: '#3a465c',
+    hsShadow: '#5b6c86', hsHi: '#ffffff', hsAccent: '#8d9cb4', path: '#9aa6bd', side: '#d3d7df', centre: '#e0b23a', asphalt: '#5f6776', light: 0.4 }
+};
+// colour that changes from map-overview hierarchy (low zoom) to real asphalt (navigation zoom)
+const zc = ([lo, hi]) => ['interpolate', ['linear'], ['zoom'], 12, lo, 14.5, lo, 16, hi];
+const roadColorByClass = (P, idx) => ['match', ['get', 'class'], 'motorway', P.road.motorway[idx], ['primary', 'trunk'], P.road.major[idx],
+  'secondary', P.road.secondary[idx], 'tertiary', P.road.tertiary[idx], ['service', 'track'], P.road.service[idx], P.road.minor[idx]];
+
+// ref like "I 35;US 77" → "35"
+const REF = ['let', 'r0', ['to-string', ['coalesce', ['get', 'ref'], '']],
+  ['let', 'r1', ['case', ['==', ['index-of', ';', ['var', 'r0']], -1], ['var', 'r0'], ['slice', ['var', 'r0'], 0, ['index-of', ';', ['var', 'r0']]]],
+    ['case', ['==', ['index-of', ' ', ['var', 'r1']], -1], ['var', 'r1'], ['slice', ['var', 'r1'], ['+', ['index-of', ' ', ['var', 'r1']], 1]]]]];
+const SHIELD_NETS = ['us-interstate', 'us-highway', 'us-state'];
+
+// map POI class → [glyph, colour]; anything not listed is not shown (keeps the map clean)
+const POI_ICONS = {
+  fuel: ['⛽', '#e8772e'], charging_station: ['🔌', '#10b981'], parking: ['P', '#2f6fde'],
+  restaurant: ['🍴', '#e5484d'], fast_food: ['🍔', '#e5484d'], cafe: ['☕', '#b7793f'], bakery: ['🥐', '#b7793f'], ice_cream: ['🍦', '#e5484d'],
+  bar: ['🍸', '#c0507a'], beer: ['🍺', '#c0507a'], alcohol_shop: ['🍷', '#c0507a'],
+  shop: ['🛍️', '#3b82f6'], clothing_store: ['👕', '#3b82f6'], grocery: ['🛒', '#16a34a'], hardware: ['🔨', '#3b82f6'],
+  hospital: ['✚', '#e11d48'], pharmacy: ['💊', '#e11d48'], doctors: ['🩺', '#e11d48'], dentist: ['🦷', '#e11d48'],
+  bank: ['$', '#0f766e'], lodging: ['🛏️', '#7c3aed'], attraction: ['★', '#8b5cf6'], museum: ['🏛️', '#8b5cf6'],
+  stadium: ['🏟️', '#0ea5e9'], school: ['🎓', '#a16207'], college: ['🎓', '#a16207'], library: ['📚', '#a16207'],
+  park: ['🌳', '#16a34a'], zoo: ['🦁', '#16a34a'], golf: ['⛳', '#16a34a'], place_of_worship: ['⛪', '#64748b'],
+  cinema: ['🎬', '#c026d3'], theatre: ['🎭', '#c026d3'], police: ['🛡️', '#1e40af'], fire_station: ['🚒', '#dc2626'],
+  post: ['✉️', '#ca8a04'], town_hall: ['🏛️', '#64748b'], toilets: ['🚻', '#64748b'], car: ['🚗', '#64748b'],
+  aerodrome: ['✈️', '#475569'], airport: ['✈️', '#475569']
+};
+const POI_FILTER = ['all', ['has', 'name'], ['match', ['get', 'class'], Object.keys(POI_ICONS), true, false]];
+
+function makeStyle(theme) {
+  const P = PALETTES[theme] || PALETTES.night;
+  const omt = (id, type, layer, extra) => Object.assign({ id, type, source: 'omt', 'source-layer': layer }, extra);
+  const rl = (id, classes, leq, z8, z12, paint, filterExtra, minzoom) => omt(id, 'line', 'transportation', Object.assign({
+    filter: ['all', isLine, CLS(classes)].concat(filterExtra || []),
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint }, minzoom ? { minzoom } : {}));
   const L = [];
+  L.push({ id: 'bg', type: 'background', paint: { 'background-color': P.bg } });
+  L.push({ id: 'hillshade', type: 'hillshade', source: 'dem', maxzoom: 15,
+    paint: { 'hillshade-exaggeration': 0.3, 'hillshade-shadow-color': P.hsShadow, 'hillshade-highlight-color': P.hsHi, 'hillshade-accent-color': P.hsAccent } });
+  L.push(omt('landcover', 'fill', 'landcover', {
+    paint: { 'fill-color': ['match', ['get', 'class'], 'wood', P.wood, 'grass', P.grass, 'farmland', P.farm, 'wetland', P.wet, 'sand', P.sand, 'ice', P.ice, P.bg],
+      'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.5, 11, 1] } }));
+  L.push(omt('landuse', 'fill', 'landuse', {
+    filter: ['match', ['get', 'class'], ['residential', 'suburb', 'quarter', 'neighbourhood', 'commercial', 'retail', 'industrial', 'garages', 'railway', 'hospital',
+      'school', 'university', 'college', 'kindergarten', 'cemetery', 'stadium', 'pitch', 'playground', 'theme_park', 'zoo', 'military'], true, false],
+    paint: { 'fill-color': ['match', ['get', 'class'], ['residential', 'suburb', 'quarter', 'neighbourhood'], P.res, ['commercial', 'retail'], P.comm,
+      ['industrial', 'garages', 'railway', 'military'], P.ind, 'hospital', P.hosp, ['school', 'university', 'college', 'kindergarten'], P.school,
+      'cemetery', P.cem, P.park], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0, 11, 1] } }));
+  L.push(omt('park', 'fill', 'park', { paint: { 'fill-color': P.park, 'fill-opacity': 0.95 } }));
+  L.push(omt('aeroway-area', 'fill', 'aeroway', { minzoom: 10, filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': P.aero } }));
+  L.push(omt('water', 'fill', 'water', { filter: ['!=', ['coalesce', ['get', 'brunnel'], ''], 'tunnel'], paint: { 'fill-color': P.water } }));
+  L.push(omt('waterway', 'line', 'waterway', { filter: ['!=', ['coalesce', ['get', 'brunnel'], ''], 'tunnel'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': P.waterLine, 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 8, ['match', ['get', 'class'], 'river', 1, 0.3],
+      14, ['match', ['get', 'class'], 'river', 4, 'canal', 3, 1.2], 18, ['match', ['get', 'class'], 'river', 18, 'canal', 12, 4]] } }));
+  L.push(omt('building-flat', 'fill', 'building', { minzoom: 13, maxzoom: 16,
+    paint: { 'fill-color': P.bldFlat, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0, 13.6, 1, 15, 1, 15.6, 0] } }));
+  L.push(omt('aeroway-runway', 'line', 'aeroway', { minzoom: 10, filter: ['all', isLine, ['match', ['get', 'class'], ['runway', 'taxiway'], true, false]],
+    paint: { 'line-color': P.runway, 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 10, ['match', ['get', 'class'], 'runway', 1.5, 0.5],
+      16, ['match', ['get', 'class'], 'runway', 40, 8], 19, ['match', ['get', 'class'], 'runway', 160, 30]] } }));
+  // rail
+  L.push(omt('rail', 'line', 'transportation', { minzoom: 11, filter: ['all', isLine, CLS(['rail', 'transit']), NOT_BR],
+    paint: { 'line-color': P.rail, 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 11, 0.8, 18, 4] } }));
+  L.push(omt('rail-hatch', 'line', 'transportation', { minzoom: 14, filter: ['all', isLine, CLS(['rail', 'transit']), NOT_BR],
+    paint: { 'line-color': P.railDash, 'line-dasharray': [0.3, 3], 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 14, 3, 18, 8] } }));
+  // tunnels: faint, dashed edges, under everything else
+  L.push(rl('tunnel-casing', ALL_ROADS, LEQ_ANY, 0, 0, { 'line-color': P.edge, 'line-opacity': 0.5, 'line-dasharray': [1.5, 1.5],
+    'line-width': roadW(['+', LEQ_ANY, 0.25], 1, 2.6) }, [BRUNNEL('tunnel')], 12));
+  L.push(rl('tunnel', ALL_ROADS, LEQ_ANY, 0, 0, { 'line-color': P.tunnel, 'line-opacity': 0.75, 'line-width': roadW(LEQ_ANY, 0.8, 2) }, [BRUNNEL('tunnel')], 12));
   // sidewalks along town roads
-  L.push({ id: 'sidewalk', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 16,
-    filter: ['all', isLine, CLS(['minor', 'tertiary', 'secondary', 'primary']), TWOWAY],
+  L.push(omt('sidewalk', 'line', 'transportation', { minzoom: 16, filter: ['all', isLine, CLS(['minor', 'tertiary', 'secondary', 'primary']), TWOWAY, NOT_BR],
     layout: { 'line-join': 'round' },
-    paint: { 'line-color': '#394259', 'line-width': lanePx(0.5),
+    paint: { 'line-color': P.side, 'line-width': lanePx(0.5),
       'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 16, ['*', LANE16, ['+', ['match', ['get', 'class'], 'minor', 2.1, 'tertiary', 2.4, 'secondary', 2.8, 4.4], 0.3]],
-        20, ['*', LANE20, ['+', ['match', ['get', 'class'], 'minor', 2.1, 'tertiary', 2.4, 'secondary', 2.8, 4.4], 0.3]]] } });
-  // white edge lines (casing) then asphalt, per class
-  for (const [id, cls, leq, col, z8, z12] of ROAD_GROUPS) {
-    L.push(rl('edge-' + id, cls, ['+', leq, 0.16], '#a7b0c4', z8, z12, { minzoom: 15,
-      paint: { 'line-color': '#a7b0c4', 'line-width': roadW(['+', leq, 0.16], z8, z12),
-        'line-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0, 16.5, 0.9] } }));
-  }
-  for (const [id, cls, leq, col, z8, z12] of ROAD_GROUPS) L.push(rl('road-' + id, cls, leq, col, z8, z12));
-  // double yellow centre line on two-way roads
-  L.push({ id: 'centre-yellow', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 15,
-    filter: ['all', isLine, CLS(['motorway', 'trunk', 'primary', 'secondary', 'tertiary']), TWOWAY, ['!', RAMP]],
-    paint: { 'line-color': '#e2b93b', 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 15, 0.4, 16, 0.6, 20, 3.5],
-      'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 15, 0.4, 16, 0.6, 20, 4] } });
-  // dashed white lane dividers: 3-lane one-way carriageways (±½ lane) and 4-lane two-way roads (±1 lane)
-  const dash = { 'line-color': 'rgba(235,240,250,.85)', 'line-dasharray': [5, 9],
-    'line-width': ['interpolate', ['exponential', 2], ['zoom'], 16, 0.6, 20, 3.2] };
-  L.push({ id: 'lanes-oneway', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 16,
-    filter: ['all', isLine, CLS(['motorway', 'trunk', 'primary']), ['!', TWOWAY], ['!', RAMP]],
-    paint: Object.assign({ 'line-gap-width': lanePx(1) }, dash) });
-  L.push({ id: 'lanes-twoway', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 16,
-    filter: ['all', isLine, CLS(['trunk', 'primary']), TWOWAY, ['!', RAMP]],
-    paint: Object.assign({ 'line-gap-width': lanePx(2) }, dash) });
-  return L;
+        20, ['*', LANE20, ['+', ['match', ['get', 'class'], 'minor', 2.1, 'tertiary', 2.4, 'secondary', 2.8, 4.4], 0.3]]] } }));
+  // outlines give the road hierarchy at overview zooms; white edge lines take over when navigating
+  for (const [id, cls, leq, , z8, z12] of ROAD_GROUPS) L.push(rl('casing-' + id, cls, leq, z8, z12, {
+    'line-color': P.casing, 'line-width': roadW(['+', leq, 0.35], z8 + 0.8, z12 + 1.4),
+    'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0, 8, 0.8, 15, 0.8, 16, 0] }, [NOT_BR], id === 'service' ? 13 : id === 'minor' ? 11 : 6));
+  for (const [id, cls, leq, , z8, z12] of ROAD_GROUPS) L.push(rl('edge-' + id, cls, leq, z8, z12, {
+    'line-color': P.edge, 'line-width': roadW(['+', leq, 0.16], z8, z12),
+    'line-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0, 16.5, 0.9] }, [NOT_BR], 15));
+  for (const [id, cls, leq, , z8, z12] of ROAD_GROUPS) L.push(rl('road-' + id, cls, leq, z8, z12,
+    { 'line-color': zc(P.road[id]), 'line-width': roadW(leq, z8, z12) }, [NOT_BR], id === 'service' ? 13 : id === 'minor' ? 10.5 : id === 'tertiary' ? 9 : 5));
+  // double yellow centre line on two-way main roads (real US convention; no lane counts are guessed)
+  L.push(omt('centre-yellow', 'line', 'transportation', { minzoom: 15,
+    filter: ['all', isLine, CLS(['motorway', 'trunk', 'primary', 'secondary', 'tertiary']), TWOWAY, ['!', RAMP], ['!', BRUNNEL('tunnel')]],
+    paint: { 'line-color': P.centre, 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 15, 0.4, 16, 0.6, 20, 3.5],
+      'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 15, 0.4, 16, 0.6, 20, 4] } }));
+  // bridges: drawn above the roads they cross, with a soft drop shadow so they read as raised
+  L.push(rl('bridge-shadow', ALL_ROADS, LEQ_ANY, 0, 0, { 'line-color': P.shadow, 'line-blur': 6, 'line-translate': [0, 5], 'line-translate-anchor': 'viewport',
+    'line-width': roadW(['+', LEQ_ANY, 0.8], 2, 4) }, [BRUNNEL('bridge')], 12));
+  L.push(rl('bridge-casing', ALL_ROADS, LEQ_ANY, 0, 0, { 'line-color': ['interpolate', ['linear'], ['zoom'], 14.5, P.casing, 16, P.edge],
+    'line-width': roadW(['+', LEQ_ANY, 0.3], 1.6, 3.6) }, [BRUNNEL('bridge')], 10));
+  L.push(rl('bridge-road', ALL_ROADS, LEQ_ANY, 0, 0, { 'line-color': ['interpolate', ['linear'], ['zoom'], 14.5, roadColorByClass(P, 0), 16, roadColorByClass(P, 1)],
+    'line-width': roadW(LEQ_ANY, 1, 2.6) }, [BRUNNEL('bridge')], 10));
+  L.push(omt('road-path', 'line', 'transportation', { minzoom: 15, filter: ['all', isLine, CLS(['path'])],
+    paint: { 'line-color': P.path, 'line-dasharray': [1.5, 1.2], 'line-width': roadW(LEQ.path, 0, 0.8) } }));
+  // 3D buildings: real heights, grow in as you zoom (no popping), colour varies with height
+  L.push(omt('building-3d', 'fill-extrusion', 'building', { minzoom: 14.5,
+    filter: ['!=', ['coalesce', ['get', 'hide_3d'], false], true],
+    paint: { 'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, P.bldLo, 25, P.bldMid, 120, P.bldHi],
+      'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14.5, 0, 15.5, ['coalesce', ['get', 'render_height'], 6]],
+      'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 14.5, 0, 15.5, ['coalesce', ['get', 'render_min_height'], 0]],
+      'fill-extrusion-opacity': 0.9 } }));
+  // ---- labels (MapLibre's collision detection keeps them from overlapping) ----
+  L.push(omt('waterway-label', 'symbol', 'waterway', { minzoom: 13, filter: ['has', 'name'],
+    layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ['Noto Sans Italic'], 'text-size': 12, 'symbol-spacing': 400, 'text-letter-spacing': 0.05 },
+    paint: { 'text-color': P.waterText, 'text-halo-color': P.halo, 'text-halo-width': 1.2 } }));
+  L.push(omt('water-label', 'symbol', 'water_name', { filter: ['has', 'name'],
+    layout: { 'text-field': NAME, 'text-font': ['Noto Sans Italic'], 'text-size': ['interpolate', ['linear'], ['zoom'], 8, 11, 14, 14], 'text-max-width': 7, 'text-letter-spacing': 0.05 },
+    paint: { 'text-color': P.waterText, 'text-halo-color': P.halo, 'text-halo-width': 1.2 } }));
+  L.push(omt('housenumber', 'symbol', 'housenumber', { minzoom: 17.5,
+    layout: { 'text-field': ['get', 'housenumber'], 'text-font': ['Noto Sans Regular'], 'text-size': 10 },
+    paint: { 'text-color': P.labelMinor, 'text-halo-color': P.halo, 'text-halo-width': 1 } }));
+  L.push(omt('road-label', 'symbol', 'transportation_name', { minzoom: 12.5,
+    filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service'], true, false],
+    layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ['Noto Sans Regular'], 'symbol-spacing': 320, 'text-max-angle': 30, 'text-padding': 3,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 13, ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], 11.5, 10], 18,
+        ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], 16, ['secondary', 'tertiary'], 15, 13.5]] },
+    paint: { 'text-color': ['match', ['get', 'class'], ['service', 'minor'], P.labelMinor, P.label], 'text-halo-color': P.halo, 'text-halo-width': 1.6 } }));
+  L.push(omt('road-shield', 'symbol', 'transportation_name', { minzoom: 7,
+    filter: ['all', ['match', ['get', 'network'], SHIELD_NETS, true, false], ['has', 'ref'], ['<=', ['length', REF], 4]],
+    layout: { 'symbol-placement': 'line', 'symbol-spacing': ['interpolate', ['linear'], ['zoom'], 8, 250, 16, 500],
+      'icon-image': ['concat', 'sh-', ['get', 'network'], '-', ['to-string', ['max', 2, ['min', 4, ['length', REF]]]]],
+      'icon-rotation-alignment': 'viewport', 'text-rotation-alignment': 'viewport',
+      'text-field': REF, 'text-font': ['Noto Sans Bold'], 'text-size': 10.5, 'text-offset': ['match', ['get', 'network'], 'us-interstate', ['literal', [0, 0.18]], ['literal', [0, 0.05]]],
+      'icon-size': 1, 'text-padding': 2 },
+    paint: { 'text-color': ['match', ['get', 'network'], 'us-interstate', '#ffffff', '#111111'] } }));
+  const poi = (id, minzoom, rankFilter) => omt(id, 'symbol', 'poi', { minzoom,
+    filter: ['all', POI_FILTER, rankFilter],
+    layout: { 'icon-image': ['concat', 'poi-', ['get', 'class']], 'icon-size': 0.9, 'symbol-sort-key': ['get', 'rank'],
+      'text-field': NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 11.5, 'text-max-width': 8, 'text-optional': true,
+      'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-padding': 2 },
+    paint: { 'text-color': P.poiText, 'text-halo-color': P.halo, 'text-halo-width': 1.4 } });
+  L.push(poi('poi-1', 14.5, ['<=', ['coalesce', ['get', 'rank'], 99], 14]));
+  L.push(poi('poi-2', 15.5, ['all', ['>', ['coalesce', ['get', 'rank'], 99], 14], ['<=', ['coalesce', ['get', 'rank'], 99], 24]]));
+  L.push(poi('poi-3', 16.5, ['>', ['coalesce', ['get', 'rank'], 99], 24]));
+  L.push(omt('airport-label', 'symbol', 'aerodrome_label', { minzoom: 9, filter: ['has', 'name'],
+    layout: { 'icon-image': 'poi-airport', 'text-field': ['coalesce', ['get', 'iata'], NAME], 'text-font': ['Noto Sans Bold'], 'text-size': 12,
+      'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-optional': true },
+    paint: { 'text-color': P.label, 'text-halo-color': P.halo, 'text-halo-width': 1.5 } }));
+  L.push(omt('place-minor', 'symbol', 'place', { minzoom: 12.5, maxzoom: 16.5, filter: ['match', ['get', 'class'], ['suburb', 'quarter', 'neighbourhood'], true, false],
+    layout: { 'text-field': NAME, 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-transform': 'uppercase', 'text-letter-spacing': 0.12, 'text-max-width': 8 },
+    paint: { 'text-color': P.placeMinor, 'text-halo-color': P.halo, 'text-halo-width': 1.4 } }));
+  L.push(omt('place-village', 'symbol', 'place', { minzoom: 10.5, maxzoom: 16, filter: ['match', ['get', 'class'], ['village', 'hamlet'], true, false],
+    layout: { 'text-field': NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 12.5, 'text-max-width': 8 },
+    paint: { 'text-color': P.place, 'text-halo-color': P.halo, 'text-halo-width': 1.6 } }));
+  L.push(omt('place-town', 'symbol', 'place', { minzoom: 8, maxzoom: 15, filter: ['==', ['get', 'class'], 'town'],
+    layout: { 'text-field': NAME, 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], 8, 11, 13, 15], 'text-max-width': 8 },
+    paint: { 'text-color': P.place, 'text-halo-color': P.halo, 'text-halo-width': 1.8 } }));
+  L.push(omt('place-city', 'symbol', 'place', { minzoom: 4, maxzoom: 14, filter: ['==', ['get', 'class'], 'city'],
+    layout: { 'text-field': NAME, 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], 4, 11, 10, 18, 13, 21], 'text-max-width': 8,
+      'symbol-sort-key': ['coalesce', ['get', 'rank'], 99] },
+    paint: { 'text-color': P.place, 'text-halo-color': P.halo, 'text-halo-width': 2 } }));
+  L.push(omt('place-state', 'symbol', 'place', { minzoom: 3, maxzoom: 7, filter: ['==', ['get', 'class'], 'state'],
+    layout: { 'text-field': NAME, 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-transform': 'uppercase', 'text-letter-spacing': 0.15 },
+    paint: { 'text-color': P.placeMinor, 'text-halo-color': P.halo, 'text-halo-width': 1.6 } }));
+  return {
+    version: 8,
+    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    sources: {
+      omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '© OpenStreetMap contributors · OpenFreeMap · OSRM' },
+      dem: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 12,
+        attribution: 'Terrain: Mapzen / AWS Open Data' }
+    },
+    light: { anchor: 'viewport', color: '#ffffff', intensity: P.light, position: [1.3, 200, 35] },
+    layers: L
+  };
 }
-const STYLE = {
-  version: 8,
-  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-  sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet',
-    attribution: '© OpenStreetMap contributors · OpenFreeMap · OSRM' } },
+// Minimal style used only if the full style ever fails to load (keeps the satnav usable)
+const BASIC_STYLE = {
+  version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+  sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '© OpenStreetMap contributors · OpenFreeMap · OSRM' } },
   layers: [
     { id: 'bg', type: 'background', paint: { 'background-color': '#0e1626' } },
-    { id: 'landuse', type: 'fill', source: 'omt', 'source-layer': 'landuse',
-      filter: ['match', ['get', 'class'], ['residential', 'suburb', 'neighbourhood'], true, false],
-      paint: { 'fill-color': '#111c30' } },
-    { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': '#12291f' } },
-    { id: 'landcover', type: 'fill', source: 'omt', 'source-layer': 'landcover',
-      filter: ['match', ['get', 'class'], ['wood', 'grass'], true, false],
-      paint: { 'fill-color': '#112419', 'fill-opacity': 0.8 } },
     { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#132a4a' } },
-    { id: 'road-path', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 15,
-      filter: ['all', isLine, CLS(['path'])],
-      paint: { 'line-color': '#4a5b80', 'line-dasharray': [1.5, 1.2], 'line-width': roadW(LEQ.path, 0, 0.8) } },
-    ...roadLayers(),
-    { id: 'building-3d', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 14,
-      paint: { 'fill-extrusion-color': '#223050',
-        'fill-extrusion-height': ['*', 0.8, ['coalesce', ['get', 'render_height'], 6]],
-        'fill-extrusion-base': ['*', 0.8, ['coalesce', ['get', 'render_min_height'], 0]],
-        'fill-extrusion-opacity': 0.85 } },
+    { id: 'road-minor', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['match', ['get', 'class'], ['minor', 'service', 'tertiary'], true, false],
+      paint: { 'line-color': '#2c3446', 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 12, 1, 18, 20] } },
+    { id: 'road-major', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary', 'secondary'], true, false],
+      paint: { 'line-color': '#3a4259', 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 8, 1, 18, 34] } },
+    { id: 'building-3d', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 15,
+      paint: { 'fill-extrusion-color': '#223050', 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6], 'fill-extrusion-opacity': 0.85 } },
     { id: 'road-label', type: 'symbol', source: 'omt', 'source-layer': 'transportation_name', minzoom: 13,
-      layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ['Noto Sans Regular'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 13, 11, 18, 15], 'text-max-angle': 30 },
-      paint: { 'text-color': '#cfd8ea', 'text-halo-color': '#0e1626', 'text-halo-width': 1.6 } },
-    { id: 'poi-label', type: 'symbol', source: 'omt', 'source-layer': 'poi', minzoom: 16.5,
-      filter: ['has', 'name'],
-      layout: { 'text-field': NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-max-width': 8,
-        'text-anchor': 'top', 'text-offset': [0, 0.4] },
-      paint: { 'text-color': ['match', ['get', 'class'], ['shop', 'clothing_store', 'grocery'], '#ffd38a', ['restaurant', 'fast_food', 'cafe'], '#ffa9a9', '#b9c7e3'],
-        'text-halo-color': '#0e1626', 'text-halo-width': 1.6 } },
-    { id: 'place-label', type: 'symbol', source: 'omt', 'source-layer': 'place',
-      filter: ['match', ['get', 'class'], ['city', 'town', 'village', 'state'], true, false],
-      layout: { 'text-field': NAME, 'text-font': ['Noto Sans Bold'],
-        'text-size': ['match', ['get', 'class'], 'city', 16, 'state', 13, 13], 'text-transform': 'none' },
-      paint: { 'text-color': '#e7ecf7', 'text-halo-color': '#0e1626', 'text-halo-width': 2 } }
+      layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 12 },
+      paint: { 'text-color': '#cfd8ea', 'text-halo-color': '#0e1626', 'text-halo-width': 1.6 } }
   ]
 };
+
+/* ---------- Icons drawn on demand: US route shields and POI badges ---------- */
+function shieldPath(g, net, w, h) {
+  g.beginPath();
+  if (net === 'us-interstate') {          // classic Interstate shield
+    g.moveTo(2, 4); g.quadraticCurveTo(w / 4, 0, w / 2, 3); g.quadraticCurveTo(3 * w / 4, 0, w - 2, 4);
+    g.quadraticCurveTo(w, h * 0.55, w / 2, h - 1); g.quadraticCurveTo(0, h * 0.55, 2, 4);
+  } else if (net === 'us-highway') {      // US route shield
+    g.moveTo(3, 2); g.lineTo(w - 3, 2); g.quadraticCurveTo(w - 1, h * 0.35, w - 4, h * 0.62);
+    g.quadraticCurveTo(w * 0.62, h * 0.8, w / 2, h - 1); g.quadraticCurveTo(w * 0.38, h * 0.8, 4, h * 0.62); g.quadraticCurveTo(1, h * 0.35, 3, 2);
+  } else {                                // state route: rounded badge
+    const r = h / 2 - 2; g.moveTo(2 + r, 2); g.lineTo(w - 2 - r, 2); g.arc(w - 2 - r, h / 2, r, -Math.PI / 2, Math.PI / 2); g.lineTo(2 + r, h - 2); g.arc(2 + r, h / 2, r, Math.PI / 2, 3 * Math.PI / 2);
+  }
+  g.closePath();
+}
+function makeIcon(id) {
+  if (!map || map.hasImage(id)) return;
+  const S = 2, cv = document.createElement('canvas'), g = cv.getContext('2d');
+  let m = id.match(/^sh-(us-interstate|us-highway|us-state)-(\d)$/);
+  if (m) {
+    const net = m[1], len = +m[2], w = (net === 'us-state' ? 14 : 16) + len * 7, h = 26;
+    cv.width = w * S; cv.height = h * S; g.scale(S, S);
+    shieldPath(g, net, w, h);
+    if (net === 'us-interstate') {
+      g.fillStyle = '#1f4fb4'; g.fill(); g.save(); g.clip(); g.fillStyle = '#d0262f'; g.fillRect(0, 0, w, 8); g.restore();
+      g.lineWidth = 1.6; g.strokeStyle = '#ffffff'; shieldPath(g, net, w, h); g.stroke();
+    } else { g.fillStyle = '#ffffff'; g.fill(); g.lineWidth = 1.6; g.strokeStyle = '#111111'; g.stroke(); }
+    map.addImage(id, g.getImageData(0, 0, cv.width, cv.height), { pixelRatio: S });
+    return;
+  }
+  m = id.match(/^poi-(.+)$/);
+  if (m && POI_ICONS[m[1]]) {
+    const [glyph, col] = POI_ICONS[m[1]], D = 22;
+    cv.width = cv.height = D * S; g.scale(S, S);
+    g.beginPath(); g.arc(D / 2, D / 2, D / 2 - 1.5, 0, Math.PI * 2); g.fillStyle = col; g.fill();
+    g.lineWidth = 1.5; g.strokeStyle = 'rgba(255,255,255,0.95)'; g.stroke();
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const plain = /^[A-Z$✚★]$/.test(glyph);
+    g.font = plain ? 'bold 12px -apple-system, Helvetica, Arial, sans-serif' : '11px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    g.fillStyle = '#ffffff'; g.fillText(glyph, D / 2, D / 2 + (plain ? 0.5 : 1));
+    map.addImage(id, g.getImageData(0, 0, cv.width, cv.height), { pixelRatio: S });
+  }
+}
 
 /* ---------- State ---------- */
 let map, carMarker, destMarker;
@@ -1242,14 +1437,11 @@ function applyScale() {
   P('turn-casing', 'line-width', MW(1.9, 5)); P('turn-line', 'line-width', MW(1.0, 2.5));
   const icon = (metres, px) => ['interpolate', ['exponential', 2], ['zoom'], 14, metres * PXM.z16 / 4 / px, 16, metres * PXM.z16 / px, 20, metres * PXM.z20 / px];
   Lp('rt-arrows', 'icon-size', icon(6.5, 96)); Lp('turn-head', 'icon-size', icon(3.6, 64));
-  // background roads drawn at the same scale
-  for (const [id, , leq, , z8, z12] of ROAD_GROUPS) {
-    P('road-' + id, 'line-width', roadW(leq, z8, z12));
-    P('edge-' + id, 'line-width', roadW(['+', leq, 0.16], z8, z12));
+  // background roads drawn at the same scale (widths come from the style definition at the current latitude)
+  for (const ly of makeStyle(themeNow || 'night').layers) {
+    if (ly.source !== 'omt' || ly['source-layer'] !== 'transportation' || !ly.paint) continue;
+    for (const k of ['line-width', 'line-gap-width']) if (ly.paint[k] !== undefined) P(ly.id, k, ly.paint[k]);
   }
-  P('road-path', 'line-width', roadW(LEQ.path, 0, 0.8));
-  P('lanes-oneway', 'line-gap-width', lanePx(1)); P('lanes-twoway', 'line-gap-width', lanePx(2));
-  P('sidewalk', 'line-width', lanePx(0.5));
 }
 
 /* ---------- Geometry helpers (metres, local tangent plane at each vertex) ---------- */
@@ -1539,33 +1731,23 @@ function renderExitSign(k, dTurn) {
 }
 
 /* ---------- Day / night ---------- */
-const THEMES = {
-  night: { bg: '#0e1626', res: '#111c30', park: '#12291f', wood: '#112419', water: '#132a4a', bld: '#223050', path: '#4a5b80', side: '#394259', edge: '#a7b0c4',
-    road: { service: '#232a39', minor: '#283041', tertiary: '#2c3446', secondary: '#2e3749', major: '#323b4f', motorway: '#363f55' }, asphalt: '#2b3245',
-    label: '#cfd8ea', halo: '#0e1626', place: '#e7ecf7',
-    poi: ['match', ['get', 'class'], ['shop', 'clothing_store', 'grocery'], '#ffd38a', ['restaurant', 'fast_food', 'cafe'], '#ffa9a9', '#b9c7e3'] },
-  day: { bg: '#e8ecf0', res: '#e0e5eb', park: '#cde5c6', wood: '#c2ddb9', water: '#9cc8ef', bld: '#d2d7df', path: '#98a4bb', side: '#cdd2db', edge: '#ffffff',
-    road: { service: '#8d95a5', minor: '#828a9a', tertiary: '#7b8391', secondary: '#757d8c', major: '#6e7685', motorway: '#676f7e' }, asphalt: '#5f6776',
-    label: '#1d2433', halo: '#ffffff', place: '#111827',
-    poi: ['match', ['get', 'class'], ['shop', 'clothing_store', 'grocery'], '#8a5200', ['restaurant', 'fast_food', 'cafe'], '#a3262a', '#3c4a66'] }
-};
 let themeMode = 'auto', themeNow = null;
 try { themeMode = localStorage.getItem('rv_theme') || 'auto'; } catch (e) {}
 function wantedTheme() { if (themeMode !== 'auto') return themeMode; const h = new Date().getHours(); return h >= 7 && h < 18 ? 'day' : 'night'; }
-function applyTheme() {
+function applyTheme(force) {
   const name = wantedTheme();
-  if (!map || name === themeNow) return;
-  const t = THEMES[name];
-  const set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch (e) {} };
-  set('bg', 'background-color', t.bg); set('landuse', 'fill-color', t.res); set('park', 'fill-color', t.park);
-  set('landcover', 'fill-color', t.wood); set('water', 'fill-color', t.water); set('building-3d', 'fill-extrusion-color', t.bld);
-  set('road-path', 'line-color', t.path); set('sidewalk', 'line-color', t.side); set('rt-car', 'line-color', t.asphalt);
-  for (const gr of ROAD_GROUPS) { set('road-' + gr[0], 'line-color', t.road[gr[0]]); set('edge-' + gr[0], 'line-color', t.edge); }
-  set('road-label', 'text-color', t.label); set('road-label', 'text-halo-color', t.halo);
-  set('place-label', 'text-color', t.place); set('place-label', 'text-halo-color', t.halo);
-  set('poi-label', 'text-color', t.poi); set('poi-label', 'text-halo-color', t.halo);
+  if (!map || !map.getLayer || (!force && name === themeNow)) return;
+  const st = makeStyle(name);
+  for (const ly of st.layers) {
+    if (!ly.paint || !map.getLayer(ly.id)) continue;
+    for (const k in ly.paint) { try { map.setPaintProperty(ly.id, k, ly.paint[k]); } catch (e) {} }
+  }
+  try { map.setLight(st.light); } catch (e) {}
+  try { if (map.getLayer('rt-car')) map.setPaintProperty('rt-car', 'line-color', PALETTES[name].asphalt); } catch (e) {}
   themeNow = name;
   document.body.dataset.theme = name;
+  applyScale();
+  if (travel === 'walk' && mode === 'nav') walkLook(true);
 }
 function syncThemeUI() {
   $('themeIco').textContent = themeMode === 'day' ? '☀️' : themeMode === 'night' ? '🌙' : '🌓';
@@ -1613,6 +1795,10 @@ function setMode(m) {
   $('speed').classList.toggle('hidden', m !== 'nav');
   $('locBtn').classList.toggle('hidden', m !== 'search');
   $('recenter').classList.add('hidden');
+  $('viewBtn').classList.toggle('hidden', m !== 'nav');
+  if (m !== 'nav' && viewMode === 'overview') viewMode = followView;
+  if (m === 'nav') syncViewUI();
+  pillKey = ''; if (m !== 'nav') $('roadPill').classList.add('hidden');
   const cp = camPref[travel];
   $('autoZoom').classList.toggle('hidden', !(m === 'nav' && (cp.z != null || cp.p != null)));
 }
@@ -1694,7 +1880,32 @@ $('driveBtn').onclick = () => {
 };
 $('endBtn').onclick = () => endTrip();
 $('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; if (muted) try { speechSynthesis.cancel(); } catch (e) {} };
-$('recenter').onclick = () => { following = true; $('recenter').classList.add('hidden'); if (gps && !sim) navUpdate(gps); };
+$('recenter').onclick = () => {
+  if (viewMode === 'overview') { viewMode = followView; syncViewUI(); }
+  following = true; $('recenter').classList.add('hidden'); if (gps && !sim) navUpdate(gps);
+};
+$('viewBtn').onclick = () => {
+  viewMode = viewMode === '3d' ? '2d' : viewMode === '2d' ? 'overview' : '3d';
+  if (viewMode !== 'overview') { followView = viewMode; try { localStorage.setItem('rv_view', viewMode); } catch (e) {} following = true; $('recenter').classList.add('hidden'); }
+  else { showOverview(); $('recenter').classList.remove('hidden'); }
+  syncViewUI();
+  toast(viewMode === '3d' ? '3D navigation view' : viewMode === '2d' ? '2D view (heading up)' : 'Route overview — tap Re-center to follow again', 1600);
+  if (viewMode !== 'overview' && gps && !sim) navUpdate(gps);
+};
+function fmtRef(r) { return String(r || '').split(';')[0].replace(/^I (\d)/, 'I-$1').replace(/^US (\d)/, 'US-$1').replace(/^([A-Z]{2}) (\d)/, '$1-$2'); }
+let pillKey = '';
+function updateRoadPill(along) {
+  if (!R) return;
+  const st = R.steps[stepAt(along)] || {};
+  const ref = fmtRef(st.ref), name = st.name || '';
+  const key = ref + '|' + name;
+  if (key === pillKey) return;
+  pillKey = key;
+  const el = $('roadPill');
+  if (!ref && !name) { el.classList.add('hidden'); return; }
+  el.innerHTML = (ref ? `<span class="pref ${/^I-/.test(ref) ? 'i' : ''}">${esc(ref)}</span>` : '') + (name && name !== st.ref ? `<span>${esc(name)}</span>` : '');
+  el.classList.remove('hidden');
+}
 $('autoZoom').onclick = () => {
   camPref[travel] = { z: null, p: null }; saveCam();
   toast('Auto zoom on — zooms with your speed and at junctions', 1800);
@@ -1779,7 +1990,7 @@ function navUpdate(f) {
 
   // trip info
   const tLeft = R.duration * (remain / (R.total || 1));
-  $('nbEta').textContent = clock(tLeft);
+  $('nbEta').innerHTML = clock(tLeft) + '<small> arrival</small>';
   const rd = fmtDist(remain);
   $('nbSub').textContent = fmtDur(tLeft) + ' · ' + rd.v + ' ' + rd.u;
   $('spVal').textContent = Math.round((f.speed || 0) * 2.237);
@@ -1845,17 +2056,35 @@ function navUpdate(f) {
   if (on) buildRouteData(along, false);
 
   // camera: closer and steeper near lane-critical junctions
-  if (following && !camGesture) {
-    let z = walk ? 18.6 : speedZoom(f.speed), pitch = walk ? 50 : 62;
-    if (g && !g.all && dTurn < (g.hw ? 700 : 220)) { z = Math.min(18.3, z + 0.6); pitch = 66; }
+  updateRoadPill(along);
+  if (following && !camGesture && viewMode !== 'overview') {
+    let z = walk ? 18.6 : speedZoom(f.speed), pitch = walk ? 50 : 60;
+    if (g && !g.all && dTurn < (g.hw ? 700 : 220)) { z = Math.min(18.3, z + 0.6); pitch = 64; }   // complex junction ahead: closer, steeper
     const pref = camPref[travel];
     if (pref.z != null) z = pref.z;          // your zoom wins over auto zoom
     if (pref.p != null) pitch = pref.p;      // and your tilt
+    const flat = viewMode === '2d';
+    if (flat) { pitch = 0; z -= 0.3; }
     map.easeTo({ center: carPos, bearing: lastHeading, pitch, zoom: z,
-      duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * 0.2] });
+      duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * (flat ? 0.17 : 0.27)] });
   }
 }
 let carOffS = null;
+/* Camera views: 3D navigation, 2D heading-up, or whole-route overview */
+let viewMode = '3d';
+try { viewMode = localStorage.getItem('rv_view') || '3d'; if (viewMode === 'overview') viewMode = '3d'; } catch (e) {}
+let followView = viewMode;
+function syncViewUI() {
+  $('viewBtn').innerHTML = viewMode === '3d' ? '<b>3D</b><small>view</small>' : viewMode === '2d' ? '<b>2D</b><small>view</small>' : '<b>⤢</b><small>route</small>';
+}
+function showOverview() {
+  if (!R) return;
+  const b = new maplibregl.LngLatBounds();
+  for (let i = segAt(lastAlong); i < R.c.length; i += Math.max(1, Math.floor(R.c.length / 400))) b.extend(R.c[i]);
+  b.extend(R.c[R.c.length - 1]);
+  following = false;
+  map.fitBounds(b, { padding: { top: 230, bottom: 170, left: 50, right: 50 }, pitch: 0, bearing: 0, duration: 1200, maxZoom: 17 });
+}
 /* Your own zoom/tilt: pinching or tilting keeps following and is remembered (separately for driving and walking) */
 let camGesture = false, touches = 0;
 const camPref = { drive: { z: null, p: null }, walk: { z: null, p: null } };
@@ -1973,21 +2202,34 @@ function pinEl() {
 function init() {
   if (!window.maplibregl) { document.querySelector('#loading .sub').textContent = 'Could not load the map — check your connection and reload.'; return; }
   map = new maplibregl.Map({
-    container: 'map', style: STYLE, center: [-98.5, 39.8], zoom: 3.6, pitch: 0,
+    container: 'map', style: makeStyle(wantedTheme()), center: [-98.5, 39.8], zoom: 3.6, pitch: 0,
     attributionControl: false, maxPitch: 70, dragRotate: true, pitchWithRotate: true
   });
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
   carMarker = new maplibregl.Marker({ element: carEl(), rotationAlignment: 'map', pitchAlignment: 'map' });
   destMarker = new maplibregl.Marker({ element: pinEl(), anchor: 'bottom' });
 
-  map.on('load', () => {
-    map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    addLaneLayers();
-    addTurnLayers();
+  themeNow = wantedTheme();
+  map.on('styleimagemissing', e => { try { makeIcon(e.id); } catch (err) {} });
+  // If the full style is ever rejected, fall back to a basic one so navigation keeps working
+  let styleOK = false, fellBack = false;
+  map.on('error', e => {
+    const msg = String((e && e.error && e.error.message) || '');
+    if (!styleOK && !fellBack && /(^|\s)(layers|sources|light)\.[\w-]+/.test(msg)) { fellBack = true; console.warn('Style fallback:', msg); map.setStyle(BASIC_STYLE); }
+  });
+  map.on('style.load', () => {
+    styleOK = true;
+    if (!map.getSource('route')) {
+      map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      addLaneLayers();
+      addTurnLayers();
+    }
     if (gps) setScale(gps.lat);
     applyScale();
-    applyTheme(); syncThemeUI();
-    const L = $('loading'); L.style.opacity = 0; setTimeout(() => L.remove(), 450);
+    applyTheme(true); syncThemeUI();
+    lastBuild.ver = null; turnKey = ''; arrowKey = '';
+    if (R) buildRouteData(lastAlong, true);
+    const L = $('loading'); if (L) { L.style.opacity = 0; setTimeout(() => L.remove(), 450); }
   });
   // one-finger drag = look around (stop following); pinch / tilt = set your zoom and keep following
   const box = map.getContainer();
