@@ -36,6 +36,11 @@
   #results{margin-top:8px;background:var(--panel);border-radius:16px;overflow:hidden;max-height:60vh;overflow-y:auto;
     box-shadow:0 8px 30px rgba(0,0,0,.45)}
   #results:empty{display:none}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;padding:12px}
+  .chip{background:rgba(255,255,255,.08);border-radius:18px;padding:8px 12px;font-size:14px;font-weight:600}
+  .chip:active{background:rgba(47,140,255,.35)}
+  .sec{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;padding:6px 14px 4px;border-top:1px solid var(--line)}
+  .res .dist{margin-left:auto;flex:none;font-size:13px;color:var(--sub);font-weight:600;padding-left:8px}
   .res{display:flex;gap:12px;align-items:center;padding:13px 14px;border-bottom:1px solid var(--line)}
   .res:last-child{border-bottom:0}
   .res:active{background:rgba(255,255,255,.06)}
@@ -501,53 +506,177 @@ function instr(step) {
   }
 }
 
-/* ---------- Search (Photon, fallback Nominatim) ---------- */
-const US_BBOX = '-170,17,-64,72';
-async function geocode(q) {
-  const near = gps ? `&lat=${gps.lat}&lon=${gps.lon}` : (map ? `&lat=${map.getCenter().lat}&lon=${map.getCenter().lng}` : '');
-  try {
-    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en&bbox=${US_BBOX}${near}`);
-    if (!r.ok) throw 0;
-    const j = await r.json();
-    const out = j.features.filter(f => !f.properties.countrycode || f.properties.countrycode === 'US').map(f => {
-      const p = f.properties;
-      const street = [p.housenumber, p.street].filter(Boolean).join(' ');
-      const name = p.name || street;
-      const parts = [p.name && street ? street : '', p.city || p.town || p.district || p.county, p.state, p.postcode].filter(Boolean);
-      return { name: name || parts.join(', '), addr: parts.join(', '), ll: f.geometry.coordinates };
-    });
-    if (out.length) return out;
-  } catch (e) {}
-  const r2 = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=8&q=${encodeURIComponent(q)}`);
-  const j2 = await r2.json();
-  return j2.map(x => {
-    const parts = x.display_name.split(', ');
-    return { name: x.name || parts[0], addr: parts.slice(x.name ? 1 : 1, 5).join(', '), ll: [+x.lon, +x.lat] };
+/* ---------- Search: Overpass (nearby places/chains) + Photon + Nominatim ---------- */
+const CATS = [
+  { k: 'Gas', i: '⛽', f: '["amenity"="fuel"]', w: ['gas', 'gas station', 'gas stations', 'fuel', 'petrol'] },
+  { k: 'Food', i: '🍔', f: '["amenity"~"^(restaurant|fast_food)$"]', w: ['food', 'restaurant', 'restaurants', 'fast food', 'eat', 'dinner', 'lunch', 'breakfast'] },
+  { k: 'Coffee', i: '☕', f: '["amenity"="cafe"]', w: ['coffee', 'cafe', 'cafes', 'coffee shop'] },
+  { k: 'Groceries', i: '🛒', f: '["shop"~"^(supermarket|grocery|convenience)$"]', w: ['grocery', 'groceries', 'supermarket', 'grocery store'] },
+  { k: 'Parking', i: '🅿️', f: '["amenity"="parking"]', w: ['parking', 'car park', 'parking lot', 'garage'] },
+  { k: 'EV charging', i: '🔌', f: '["amenity"="charging_station"]', w: ['ev', 'ev charging', 'charging', 'charger', 'chargers', 'supercharger'] },
+  { k: 'Hotels', i: '🏨', f: '["tourism"~"^(hotel|motel)$"]', w: ['hotel', 'hotels', 'motel', 'motels'] },
+  { k: 'Pharmacy', i: '💊', f: '["amenity"="pharmacy"]', w: ['pharmacy', 'drugstore', 'drug store'] },
+  { k: 'Hospital', i: '🏥', f: '["amenity"="hospital"]', w: ['hospital', 'er', 'emergency room'] },
+  { k: 'ATM', i: '🏧', f: '["amenity"~"^(atm|bank)$"]', w: ['atm', 'bank', 'banks'] },
+  { k: 'Restrooms', i: '🚻', f: '["amenity"="toilets"]', w: ['restroom', 'restrooms', 'toilet', 'bathroom'] },
+  { k: 'Shopping', i: '🛍️', f: '["shop"="mall"]', w: ['mall', 'malls', 'shopping center', 'shopping mall', 'shopping'] }
+];
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+const here = () => gps ? [gps.lon, gps.lat] : (map ? [map.getCenter().lng, map.getCenter().lat] : [-98.5, 39.8]);
+const cleanQ = q => q.toLowerCase().replace(/\b(near me|nearby|close by|closest|nearest|around here|near here)\b/g, '').replace(/\s+/g, ' ').trim();
+const reEsc = t => t.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
+function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]); }
+
+async function overpass(query) {
+  let lastErr;
+  for (const url of OVERPASS) {
+    try {
+      const r = await withTimeout(fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }), 14000);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return (await r.json()).elements || [];
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+function fromOSM(el, cat) {
+  const t = el.tags || {};
+  const lon = el.lon != null ? el.lon : el.center && el.center.lon, lat = el.lat != null ? el.lat : el.center && el.center.lat;
+  if (lon == null) return null;
+  const street = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+  const parts = [street, t['addr:city'], t['addr:state']].filter(Boolean);
+  let name = t.name || t.brand || (cat ? cat.k : 'Place');
+  if (t.brand && t.name && !t.name.toLowerCase().includes(t.brand.toLowerCase())) name = t.brand + ' – ' + t.name;
+  const kind = (t.amenity || t.shop || t.tourism || '').replace(/_/g, ' ');
+  return { name, addr: parts.join(', ') || kind, ll: [lon, lat], near: true, icon: cat ? cat.i : '📍' };
+}
+async function searchNearbyCategory(cat) {
+  const [lon, lat] = here();
+  for (const rad of [8000, 25000]) {
+    const els = await overpass(`[out:json][timeout:12];nwr${cat.f}(around:${rad},${lat},${lon});out center tags 80;`);
+    const list = els.map(e => fromOSM(e, cat)).filter(Boolean);
+    if (list.length >= 3 || rad === 25000) return list;
+  }
+  return [];
+}
+async function searchNearbyName(q) {
+  const [lon, lat] = here();
+  const rx = reEsc(q).replace(/'/g, '.?').replace(/\s+/g, '.?');
+  const els = await overpass(`[out:json][timeout:12];(nwr["name"~"${rx}",i](around:25000,${lat},${lon});nwr["brand"~"${rx}",i](around:25000,${lat},${lon}););out center tags 60;`);
+  return els.filter(e => e.tags && (e.tags.amenity || e.tags.shop || e.tags.tourism || e.tags.leisure || e.tags.office || e.tags.building || e.tags.craft || e.tags.healthcare))
+    .map(e => fromOSM(e)).filter(Boolean);
+}
+async function searchPhoton(q) {
+  const [lon, lat] = here();
+  const r = await withTimeout(fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lat=${lat}&lon=${lon}`), 9000);
+  if (!r.ok) throw new Error('photon ' + r.status);
+  const j = await r.json();
+  return (j.features || []).filter(f => !f.properties.countrycode || f.properties.countrycode === 'US').map(f => {
+    const p = f.properties;
+    const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+    const name = p.name || street;
+    const parts = [p.name && street ? street : '', p.city || p.town || p.district || p.county, p.state, p.postcode].filter(Boolean);
+    return { name: name || parts.join(', '), addr: parts.join(', '), ll: f.geometry.coordinates };
   });
 }
-function renderResults(list) {
+async function searchNominatim(q) {
+  const [lon, lat] = here();
+  const vb = `${lon - 1},${lat + 1},${lon + 1},${lat - 1}`;
+  const r = await withTimeout(fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=10&viewbox=${vb}&q=${encodeURIComponent(q)}`), 9000);
+  if (!r.ok) throw new Error('nominatim ' + r.status);
+  return (await r.json()).map(x => {
+    const parts = x.display_name.split(', ');
+    return { name: x.name || parts[0], addr: parts.slice(1, 5).join(', '), ll: [+x.lon, +x.lat] };
+  });
+}
+function mergeResults(near, geo) {
+  const me = here(), out = [];
+  const dup = r => out.some(o => hav(o.ll, r.ll) < 120 && (o.name || '').toLowerCase().slice(0, 6) === (r.name || '').toLowerCase().slice(0, 6));
+  near.forEach(r => r.dist = hav(me, r.ll));
+  near.sort((a, b) => a.dist - b.dist).slice(0, 8).forEach(r => { if (!dup(r)) out.push(r); });
+  geo.forEach(r => { r.dist = hav(me, r.ll); if (!dup(r) && out.length < 16) out.push(r); });
+  return out;
+}
+
+/* recents */
+function loadRecents() { try { return JSON.parse(localStorage.getItem('rv_recent') || '[]'); } catch (e) { return []; } }
+function saveRecent(p) {
+  try {
+    const list = loadRecents().filter(r => !(r.name === p.name && hav(r.ll, p.ll) < 50));
+    list.unshift({ name: p.name, addr: p.addr, ll: p.ll });
+    localStorage.setItem('rv_recent', JSON.stringify(list.slice(0, 8)));
+  } catch (e) {}
+}
+
+function distLabel(m) { if (m == null) return ''; const d = fmtDist(m); return d.v + ' ' + d.u; }
+function renderResults(list, note) {
   const box = $('results');
-  if (!list) { box.innerHTML = ''; return; }
-  if (!list.length) { box.innerHTML = '<div class="res info">No places found in the US</div>'; return; }
-  box.innerHTML = list.map((r, i) => `<div class="res" data-i="${i}"><div class="pin"><svg width="16" height="16" viewBox="0 0 24 24" fill="#2f8cff"><path d="M12 22s-7-7.5-7-12.5a7 7 0 0 1 14 0C19 14.5 12 22 12 22z"/></svg></div><div class="m"><div class="t">${esc(r.name)}</div><div class="s">${esc(r.addr)}</div></div></div>`).join('');
-  box.querySelectorAll('.res[data-i]').forEach(el => el.onclick = () => pickDest(list[+el.dataset.i]));
+  if (!list) { box.innerHTML = ''; box._list = null; return; }
+  let html = '';
+  if (!list.length && note) html = `<div class="res info">${esc(note)}</div>`;
+  html += list.map((r, i) => `<div class="res" data-i="${i}"><div class="pin">${r.icon ? `<span style="font-size:17px">${r.icon}</span>` : '<svg width="16" height="16" viewBox="0 0 24 24" fill="#2f8cff"><path d="M12 22s-7-7.5-7-12.5a7 7 0 0 1 14 0C19 14.5 12 22 12 22z"/></svg>'}</div><div class="m"><div class="t">${esc(r.name)}</div><div class="s">${esc(r.addr)}</div></div>${r.dist != null ? `<div class="dist">${distLabel(r.dist)}</div>` : ''}</div>`).join('');
+  if (list.length && note) html += `<div class="res info">${esc(note)}</div>`;
+  box.innerHTML = html;
+  box.querySelectorAll('.res[data-i]').forEach(el => el.onclick = () => { const p = list[+el.dataset.i]; saveRecent(p); pickDest(p); });
   box._list = list;
 }
+function renderHome() {
+  const box = $('results');
+  const rec = loadRecents();
+  box.innerHTML = `<div class="chips">${CATS.map((c, i) => `<button class="chip" data-c="${i}">${c.i} ${c.k}</button>`).join('')}</div>` +
+    (rec.length ? '<div class="sec">Recent</div>' + rec.map((r, i) => `<div class="res" data-r="${i}"><div class="pin"><span style="font-size:15px">🕘</span></div><div class="m"><div class="t">${esc(r.name)}</div><div class="s">${esc(r.addr || '')}</div></div></div>`).join('') : '');
+  box.querySelectorAll('.chip').forEach(el => el.onclick = () => runCategory(CATS[+el.dataset.c]));
+  box.querySelectorAll('.res[data-r]').forEach(el => el.onclick = () => { const p = rec[+el.dataset.r]; saveRecent(p); pickDest(p); });
+  box._list = null;
+}
+async function runCategory(cat) {
+  const seq = ++searchSeq;
+  $('q').value = cat.k; $('clearQ').classList.remove('hidden'); $('q').blur();
+  renderResults([], 'Finding ' + cat.k.toLowerCase() + ' near you…');
+  try {
+    const list = mergeResults(await searchNearbyCategory(cat), []);
+    if (seq === searchSeq) renderResults(list, list.length ? '' : 'Nothing found within 15 miles');
+  } catch (e) { if (seq === searchSeq) renderResults([], 'Nearby search is busy — try again in a moment'); }
+}
+async function runSearch(raw) {
+  const seq = ++searchSeq;
+  const q = raw.trim(), cq = cleanQ(q);
+  const cat = CATS.find(c => c.w.includes(cq));
+  if (cat) return runCategory(cat);
+  renderResults([], 'Searching…');
+  let near = [], geo = [], done = 0, fails = 0;
+  const update = () => {
+    if (seq !== searchSeq) return;
+    const list = mergeResults(near.slice(), geo.slice());
+    const pending = done < 3;
+    renderResults(list, pending ? 'Searching…' : (list.length ? '' : (fails === 3 ? 'Can’t reach map search — check your signal' : 'No matches — try adding the city or street')));
+  };
+  const fin = ok => { done++; if (!ok) fails++; update(); };
+  searchPhoton(q).then(r => { geo = r.concat(geo); fin(true); }).catch(() => fin(false));
+  searchNominatim(q).then(r => { geo = geo.concat(r); fin(true); }).catch(() => fin(false));
+  if (cq.length >= 3) searchNearbyName(cq).then(r => { near = r; fin(true); }).catch(() => fin(false));
+  else fin(true);
+}
+$('q').addEventListener('focus', () => { if (!$('q').value.trim()) renderHome(); });
 $('q').addEventListener('input', () => {
   const q = $('q').value.trim();
   $('clearQ').classList.toggle('hidden', !q);
   clearTimeout(searchTimer);
-  if (q.length < 3) { renderResults(null); return; }
-  searchTimer = setTimeout(async () => {
-    const seq = ++searchSeq;
-    try { const list = await geocode(q); if (seq === searchSeq) renderResults(list); }
-    catch (e) { if (seq === searchSeq) $('results').innerHTML = '<div class="res info">Search unavailable — check your connection</div>'; }
-  }, 320);
+  if (!q) { renderHome(); return; }
+  if (q.length < 2) return;
+  searchTimer = setTimeout(() => runSearch(q), 450);
 });
 $('q').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { const l = $('results')._list; if (l && l.length) pickDest(l[0]); }
+  if (e.key === 'Enter') {
+    e.preventDefault(); clearTimeout(searchTimer);
+    const l = $('results')._list;
+    if (l && l.length) { saveRecent(l[0]); pickDest(l[0]); } else if ($('q').value.trim()) runSearch($('q').value);
+  }
 });
-$('clearQ').onclick = () => { $('q').value = ''; renderResults(null); $('clearQ').classList.add('hidden'); $('q').focus(); };
+$('clearQ').onclick = () => { $('q').value = ''; $('clearQ').classList.add('hidden'); renderHome(); $('q').focus(); };
+document.addEventListener('touchstart', e => {
+    if (mode === 'search' && !$('searchPanel').contains(e.target) && !$('q').value.trim()) renderResults(null);
+}, { passive: true });
 
 /* ---------- Routing (OSRM) ---------- */
 async function getRoute(from, to, heading) {
