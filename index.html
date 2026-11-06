@@ -233,7 +233,7 @@ const $ = id => document.getElementById(id);
 const NAME = ['coalesce', ['get', 'name:en'], ['get', 'name']];
 const isLine = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false];
 // Real-world scale: one 3.6 m lane in screen px (512px tiles, ~40°N)
-const LANE16 = 3.94, LANE20 = 63;
+let LANE16 = 3.94, LANE20 = 63;
 const lanePx = (k, z12) => ['interpolate', ['exponential', 2], ['zoom'], 8, 0, 12, z12 == null ? 0 : z12, 16, ['*', LANE16, k], 20, ['*', LANE20, k]];
 const RAMP = ['==', ['coalesce', ['get', 'ramp'], 0], 1];
 const TWOWAY = ['==', ['coalesce', ['get', 'oneway'], 0], 0];
@@ -516,29 +516,21 @@ function renderLanes(k, dTurn, far, near) {
 const ROUTE_W = (k, minPx) => ['interpolate', ['exponential', 2], ['zoom'], 8, minPx * 0.7, 13, minPx, 16, Math.max(minPx * 0.9, LANE16 * k), 20, LANE20 * k];
 const ROUTE_OFF = ['interpolate', ['exponential', 2], ['zoom'], 13, 0, 16, ['*', LANE16, ['coalesce', ['get', 'off'], 0]], 20, ['*', LANE20, ['coalesce', ['get', 'off'], 0]]];
 let turnKey = '';
-function laneOffAt(i) {
-  const si = R.seg && R.seg[i];
-  if (!si || !si.n) return R.offs[i];
-  const rec = R.rec && R.rec[i];
-  const j = rec ? (rec[0] + rec[rec.length - 1]) / 2 : (si.n - 1) / 2;
-  return laneCentre(si, j);
-}
 function renderTurnArrow(k, dTurn, far) {
   const st = R.steps[k];
   const show = st && dTurn < Math.max(far, 500) && st.maneuver.type !== 'arrive' && st.maneuver.type !== 'depart'
     && !(st.maneuver.modifier === 'straight' && (st.maneuver.type === 'continue' || st.maneuver.type === 'new name'));
-  const key = show ? 't' + k : 'x';
+  const key = show ? 't' + k + '|' + LD.ver : 'x';
   if (key === turnKey) return;
   turnKey = key;
   const empty = { type: 'FeatureCollection', features: [] };
   if (!show) { map.getSource('turn').setData(empty); map.getSource('turnhead').setData(empty); return; }
-  const a = Math.max(0, R.starts[k] - 45), b = Math.min(R.total, R.starts[k] + 35);
-  const coords = [pointAt(a).pt];
-  for (let i = 0; i < R.cum.length; i++) if (R.cum[i] > a && R.cum[i] < b) coords.push(R.c[i]);
-  const end = pointAt(b); coords.push(end.pt);
-  const oIn = laneOffAt(segAt(R.starts[k] - 3)), oOut = laneOffAt(segAt(b - 1));
-  map.getSource('turn').setData({ type: 'Feature', properties: { off: oIn }, geometry: { type: 'LineString', coordinates: coords } });
-  map.getSource('turnhead').setData({ type: 'Feature', properties: { b: end.bearing }, geometry: { type: 'Point', coordinates: shiftLL(end.pt, end.bearing, oOut * 3.6) } });
+  const lines = routePath(segAt(Math.max(0, R.starts[k] - 45)), segAt(Math.min(R.total - 0.1, R.starts[k] + 35)), true);
+  const line = lines.map(l => l.pts).sort((x, y) => y.length - x.length)[0];
+  if (!line || line.length < 2) { map.getSource('turn').setData(empty); map.getSource('turnhead').setData(empty); return; }
+  const e = line[line.length - 1], e0 = line[line.length - 2];
+  map.getSource('turn').setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } });
+  map.getSource('turnhead').setData({ type: 'Feature', properties: { b: bearing(e0, e) }, geometry: { type: 'Point', coordinates: e } });
 }
 function addTurnLayers() {
   const cv = document.createElement('canvas'); cv.width = cv.height = 64;
@@ -550,9 +542,9 @@ function addTurnLayers() {
   map.addSource('turn', { type: 'geojson', data: empty });
   map.addSource('turnhead', { type: 'geojson', data: empty });
   map.addLayer({ id: 'turn-casing', type: 'line', source: 'turn', layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#0b3a86', 'line-width': ROUTE_W(0.95, 5), 'line-offset': ROUTE_OFF } }, 'road-label');
+    paint: { 'line-color': '#0b3a86' } }, 'road-label');
   map.addLayer({ id: 'turn-line', type: 'line', source: 'turn', layout: { 'line-cap': 'butt', 'line-join': 'round' },
-    paint: { 'line-color': '#ffffff', 'line-width': ROUTE_W(0.55, 2.5), 'line-offset': ROUTE_OFF } }, 'road-label');
+    paint: { 'line-color': '#ffffff' } }, 'road-label');
   map.addLayer({ id: 'turn-head', type: 'symbol', source: 'turnhead',
     layout: { 'icon-image': 'turnhead', 'icon-rotate': ['get', 'b'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map',
       'icon-allow-overlap': true, 'icon-ignore-placement': true,
@@ -794,10 +786,17 @@ function prepare(rt) {
   const c = [c0[0]], cum = [0];
   for (let i = 1; i < c0.length; i++) {
     const a = c0[i - 1], b = c0[i], L = cum0[i] - cum0[i - 1], n = Math.max(1, Math.ceil(L / 20));
+    if (L < 0.05) continue;
     for (let j = 1; j <= n; j++) { const t = j / n; c.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); cum.push(cum0[i - 1] + L * t); }
   }
   const motor = steps.map(s => (s.intersections || []).some(x => (x.classes || []).includes('motorway')));
-  return { c, cum, total: cum[cum.length - 1], steps, starts, motor, duration: rt.duration, distance: rt.distance };
+  const segStep = new Array(Math.max(0, c.length - 1)).fill(1);
+  for (let i = 0, k = 1; i < c.length - 1; i++) {
+    const mid = (cum[i] + cum[i + 1]) / 2;
+    while (k < steps.length - 1 && starts[k] <= mid) k++;
+    segStep[i] = k;
+  }
+  return { c, cum, total: cum[cum.length - 1], steps, starts, motor, segStep, duration: rt.duration, distance: rt.distance };
 }
 // Lane offset (in lanes, + = right of road centre) for each route segment
 function computeOffsets() {
@@ -848,6 +847,7 @@ function setRoute(rt) {
   resetLE(); carOffS = null;
   lastSnapSeg = 0; lastAlong = 0; announced = {}; laneKey = ''; turnKey = ''; arrowKey = ''; signKey = '';
   if (map.getSource('arrows')) map.getSource('arrows').setData({ type: 'FeatureCollection', features: [] });
+  if (setScale(R.c[0][1])) applyScale();
   buildRouteData(0, true);
   loadLaneData(0);
 }
@@ -942,6 +942,12 @@ function laneInfo(w, fwd) {
     if (parts.length === info.n) info.turn = parts.map(x => x.split(';'));
   }
   if (info.n > 8) info.n = 8;
+  const base = (t.highway || '').replace('_link', '');
+  info.lw = { motorway: 3.65, trunk: 3.6, primary: 3.4, secondary: 3.3, tertiary: 3.2 }[base] || 3.0;
+  if (/_link$/.test(t.highway || '')) info.lw = 3.6;
+  const wTag = parseFloat(t.width), allLanes = parseInt(t.lanes, 10);
+  if (wTag > 2 && allLanes > 0) info.lw = Math.max(2.7, Math.min(4.0, wTag / allLanes));
+  info.lw = Math.round(info.lw * 100) / 100;
   LD.info.set(key, info);
   return info;
 }
@@ -1091,23 +1097,68 @@ function bestLane(i, si, k, mid) {
 }
 function planBestLanes() {
   const N = R.c.length - 1;
-  R.best = new Array(N).fill(null); R.bestS = new Array(N).fill(null); R.segStep = new Array(N).fill(0);
+  R.best = new Array(N).fill(null); R.bestS = new Array(N).fill(null);
   let k = 1;
   for (let i = 0; i < N; i++) {
     const mid = (R.cum[i] + R.cum[i + 1]) / 2;
     while (k < R.steps.length - 1 && R.starts[k] <= mid) k++;
-    R.segStep[i] = k;
     const si = R.seg[i];
     if (si && si.n) R.best[i] = bestLane(i, si, k, mid);
   }
-  // smoothed position (in lanes): each lane change is spread over ~80 m and finishes BEFORE it's needed
-  const STEP = 0.25;
+  // Where a one-way road gains/loses lanes, keep the continuing edge in place and taper over 150 m
+  // (stops lane lines and the blue line jumping sideways at the change)
+  R.shift = new Array(N).fill(0);
+  let prev = null, shift0 = 0, since = 0;
+  for (let i = 0; i < N; i++) {
+    const si = R.seg[i] && R.seg[i].n ? R.seg[i] : null;
+    if (!si || !prev || R.segStep[i] !== R.segStep[i - 1]) { shift0 = 0; since = 0; }
+    else if (si !== prev && (si.n !== prev.n || si.lw !== prev.lw || si.ow !== prev.ow)) {
+      if (si.ow && prev.ow) {
+        const leftPocket = si.n > prev.n && si.turn && si.turn[0] && si.turn[0].some(x => /left/.test(x));
+        const pe = leftPocket ? prev.n / 2 * prev.lw : -prev.n / 2 * prev.lw;
+        const ne = leftPocket ? si.n / 2 * si.lw : -si.n / 2 * si.lw;
+        shift0 = pe + R.shift[i - 1] - ne;
+      } else shift0 = 0;
+      since = 0;
+    }
+    R.shift[i] = shift0 * Math.max(0, 1 - since / 150);
+    since += R.cum[i + 1] - R.cum[i];
+    prev = si;
+  }
+  // Exits & splits: map ramps start on the highway's centre line, but the exit lane really peels off from the side.
+  // Carry the lane position from the approach until the ramp has physically separated from the highway.
+  for (let k = 1; k < R.steps.length - 1; k++) {
+    const m = R.steps[k].maneuver, mod = m.modifier || '';
+    if (!(mod.startsWith('slight') || mod === 'straight' || !mod)) continue;
+    if (!['off ramp', 'fork', 'on ramp', 'merge', 'turn', 'continue', 'new name'].includes(m.type)) continue;
+    const iIn = segAt(R.starts[k] - 1), iOut = segAt(R.starts[k] + 1);
+    if (R.segStep[iIn] === R.segStep[iOut]) continue;
+    const sIn = R.seg[iIn], sOut = R.seg[iOut];
+    if (!sIn || !sIn.n || !sOut || !sOut.n || R.best[iIn] == null || R.best[iOut] == null) continue;
+    const c0 = (laneCentre(sIn, R.best[iIn]) * sIn.lw + R.shift[iIn]) - laneCentre(sOut, R.best[iOut]) * sOut.lw;
+    if (Math.abs(c0) < 0.3) continue;
+    const J = R.c[iOut], br = toRad(bearing(R.c[iIn], R.c[iIn + 1]));
+    const jkx = 111320 * Math.cos(toRad(J[1])), jky = 110540;
+    for (let i = iOut; i < N && R.segStep[i] === R.segStep[iOut] && R.cum[i] < R.starts[k] + 500; i++) {
+      const q = R.c[i], x = (q[0] - J[0]) * jkx, y = (q[1] - J[1]) * jky;
+      const sep = x * Math.cos(br) - y * Math.sin(br);          // how far the ramp has moved right of the highway line
+      // smooth blend: leaves parallel to the highway and eases onto the ramp (no corner where it lets go)
+      const sg = Math.sign(c0), u = Math.max(0, sg * sep);
+      const extra = sg * Math.pow(Math.pow(Math.abs(c0), 4) + Math.pow(u, 4), 0.25) - sep;
+      if (Math.abs(extra) < 0.02) break;
+      R.shift[i] += extra;
+    }
+  }
+  // Planned position in real metres; each lane change is spread over ~80 m and finishes BEFORE it's needed.
+  // Done in metres (not lane numbers) so it stays put when lanes are added/dropped beside you.
+  R.bestM = new Array(N).fill(null);
   for (let i = N - 1; i >= 0; i--) {
     const si = R.seg[i];
     if (!si || !si.n || R.best[i] == null) continue;
-    const t = laneCentre(si, R.best[i]), nx = R.bestS[i + 1];
-    R.bestS[i] = (nx != null && R.segStep[i + 1] === R.segStep[i]) ? nx + Math.max(-STEP, Math.min(STEP, t - nx)) : t;
+    const t = laneCentre(si, R.best[i]) * si.lw + R.shift[i], nx = R.bestM[i + 1], step = 0.25 * si.lw;
+    R.bestM[i] = (nx != null && R.segStep[i + 1] === R.segStep[i]) ? nx + Math.max(-step, Math.min(step, t - nx)) : t;
   }
+  R.bestS = R.bestM.map((m, i) => m == null ? null : (m - R.shift[i]) / R.seg[i].lw);
 }
 function laneName(b, n) {
   if (n === 1) return 'only lane';
@@ -1148,7 +1199,7 @@ function updateLaneEstimate(s, f, si) {
   if (!si || !si.n || travel !== 'drive') { resetLE(); return; }
   LE.lat = LE.lat == null ? s.lat : LE.lat * 0.6 + s.lat * 0.4;
   if (f.acc == null || f.acc > 5) { LE.conf = false; LE.lane = null; LE.candN = 0; return; }
-  const x = LE.lat / 3.6;
+  const x = (LE.lat - segShift(s.i)) / si.lw;
   let j = si.ow ? Math.floor(x + si.n / 2) : Math.floor(x - si.bw);
   if (j < -1 || j > si.n) { LE.conf = false; LE.lane = null; return; } // not plausibly on this carriageway
   j = Math.max(0, Math.min(si.n - 1, j));
@@ -1162,81 +1213,203 @@ function updateLaneEstimate(s, f, si) {
 
 /* ---------- Route drawing: lanes, markings, recommended-lane highlight ---------- */
 let lastBuild = { along: -1e9, ver: null }, recVisible = false;
+
+/* ---------- One shared scale: screen px per metre at the current latitude (Web Mercator, 512-px tiles) ---------- */
+let PXM = { lat: null, z10: 0, z16: 0, z20: 0 };
+function setScale(lat) {
+  if (lat == null || (PXM.lat != null && Math.abs(lat - PXM.lat) < 0.5)) return false;
+  const base = 512 / (40075016.686 * Math.cos(toRad(lat)));
+  PXM = { lat, z10: base * 1024, z16: base * 65536, z20: base * 1048576 };
+  LANE16 = 3.6 * PXM.z16; LANE20 = 3.6 * PXM.z20;
+  return true;
+}
+setScale(40);
+// width of a line that is `m` metres wide on the ground (never thinner than minPx)
+const MW = (m, minPx) => ['interpolate', ['exponential', 2], ['zoom'],
+  10, ['max', (minPx || 0) * 0.5, ['*', PXM.z10, m]], 16, ['max', minPx || 0, ['*', PXM.z16, m]], 20, ['max', minPx || 0, ['*', PXM.z20, m]]];
+function applyScale() {
+  if (!map || !map.getLayer) return;
+  const P = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch (e) {} };
+  const Lp = (id, prop, v) => { try { if (map.getLayer(id)) map.setLayoutProperty(id, prop, v); } catch (e) {} };
+  // route + lanes (all widths in real metres)
+  P('rt-car', 'line-width', MW(['get', 'wm'], 1.5));
+  P('rt-lane', 'line-width', MW(['*', 0.92, ['get', 'wm']], 1));
+  P('rt-best-casing', 'line-width', MW(['*', 0.86, ['get', 'wm']], 3.5));
+  P('rt-best', 'line-width', MW(['*', 0.72, ['get', 'wm']], 2.6));
+  P('rt-flow', 'line-width', MW(['*', 0.26, ['get', 'wm']], 0.6));
+  P('rt-dash', 'line-width', MW(0.15, 0.6)); P('rt-edgeR', 'line-width', MW(0.15, 0.6)); P('rt-edgeY', 'line-width', MW(0.12, 0.5));
+  P('route-casing', 'line-width', MW(3.0, 6)); P('route-line', 'line-width', MW(2.4, 3.8));
+  P('turn-casing', 'line-width', MW(1.9, 5)); P('turn-line', 'line-width', MW(1.0, 2.5));
+  const icon = (metres, px) => ['interpolate', ['exponential', 2], ['zoom'], 14, metres * PXM.z16 / 4 / px, 16, metres * PXM.z16 / px, 20, metres * PXM.z20 / px];
+  Lp('rt-arrows', 'icon-size', icon(6.5, 96)); Lp('turn-head', 'icon-size', icon(3.6, 64));
+  // background roads drawn at the same scale
+  for (const [id, , leq, , z8, z12] of ROAD_GROUPS) {
+    P('road-' + id, 'line-width', roadW(leq, z8, z12));
+    P('edge-' + id, 'line-width', roadW(['+', leq, 0.16], z8, z12));
+  }
+  P('road-path', 'line-width', roadW(LEQ.path, 0, 0.8));
+  P('lanes-oneway', 'line-gap-width', lanePx(1)); P('lanes-twoway', 'line-gap-width', lanePx(2));
+  P('sidewalk', 'line-width', lanePx(0.5));
+}
+
+/* ---------- Geometry helpers (metres, local tangent plane at each vertex) ---------- */
+// Offset vertices vFrom..vTo of the route sideways by offFn(v) metres (+ = right of travel), with proper mitre on bends
+function offsetLine(vFrom, vTo, offFn) {
+  const out = [];
+  for (let v = vFrom; v <= vTo; v++) {
+    const p = R.c[v], kx = 111320 * Math.cos(toRad(p[1])), ky = 110540;
+    const dir = (a, b) => { const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * ky, L = Math.hypot(dx, dy); return L > 1e-6 ? [dx / L, dy / L] : null; };
+    let d1 = v > vFrom ? dir(R.c[v - 1], p) : null, d2 = v < vTo ? dir(p, R.c[v + 1]) : null;
+    d1 = d1 || d2; d2 = d2 || d1;
+    const off = offFn(v);
+    if (!d1 || !off) { out.push(p); continue; }
+    let nx = d1[1] + d2[1], ny = -(d1[0] + d2[0]);
+    const nl = Math.hypot(nx, ny);
+    if (nl < 1e-6) { nx = d2[1]; ny = -d2[0]; } else { nx /= nl; ny /= nl; }
+    const cosHalf = nx * d2[1] - ny * d2[0];
+    const m = off / Math.max(0.6, cosHalf);
+    out.push([p[0] + nx * m / kx, p[1] + ny * m / ky]);
+  }
+  return out;
+}
+const lerpLL = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += hav(pts[i - 1], pts[i]); return L; }
+function trimStart(pts, m) {
+  if (pts.length < 2) return pts;
+  m = Math.min(m, polyLen(pts) * 0.4);
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const d = hav(pts[i - 1], pts[i]);
+    if (acc + d >= m) return [lerpLL(pts[i - 1], pts[i], d ? (m - acc) / d : 0)].concat(pts.slice(i));
+    acc += d;
+  }
+  return pts.slice(-2);
+}
+const trimEnd = (pts, m) => trimStart(pts.slice().reverse(), m).reverse();
+// Smooth path through a junction: from the end of lane line A into the start of lane line B
+function connector(A, B) {
+  const a = A[A.length - 1], a0 = A[A.length - 2] || a, b = B[0], b1 = B[1] || b;
+  const kx = 111320 * Math.cos(toRad(a[1])), ky = 110540;
+  const P = q => [(q[0] - a[0]) * kx, (q[1] - a[1]) * ky];
+  const nrm = v => { const L = Math.hypot(v[0], v[1]) || 1; return [v[0] / L, v[1] / L]; };
+  const pa0 = P(a0), pb = P(b), pb1 = P(b1);
+  const da = nrm([-pa0[0], -pa0[1]]), db = nrm([pb1[0] - pb[0], pb1[1] - pb[1]]);
+  const det = da[0] * db[1] - da[1] * db[0];
+  let ctrl = null;
+  if (Math.abs(det) > 0.08) {
+    const t = (pb[0] * db[1] - pb[1] * db[0]) / det, s = (da[0] * pb[1] - da[1] * pb[0]) / det;
+    if (t > 0 && s > 0 && t < 60 && s < 60) ctrl = [t * da[0], t * da[1]];
+  }
+  if (!ctrl) ctrl = [pb[0] / 2, pb[1] / 2];
+  const out = [];
+  for (let i = 1; i < 10; i++) {
+    const u = i / 10, w0 = (1 - u) * (1 - u), w1 = 2 * u * (1 - u), w2 = u * u;
+    const x = w1 * ctrl[0] + w2 * pb[0], y = w1 * ctrl[1] + w2 * pb[1];
+    out.push([a[0] + x / kx, a[1] + y / ky]);
+  }
+  return out;
+}
+// Maximal runs of segments with the same key inside one route step
+function pieces(i0, i1, keyFn) {
+  const out = []; let cur = null;
+  for (let i = i0; i <= i1; i++) {
+    const key = keyFn(i);
+    if (key == null) { cur = null; continue; }
+    if (cur && cur.key === key && R.segStep[i] === cur.step && cur.to === i - 1) cur.to = i;
+    else { cur = { key, from: i, to: i, step: R.segStep[i] }; out.push(cur); }
+  }
+  return out;
+}
+const segShift = i => (R.shift ? R.shift[i] || 0 : 0);
+const laneM = (i, j) => laneCentre(R.seg[i], j) * R.seg[i].lw + segShift(i);   // lane j centre, metres right of the route line
+function plannedM(i) { return R.bestM && R.bestM[i] != null ? R.bestM[i] : (R.offs[i] || 0) * 3.4; }
+// The planned driving path for segments i0..i1 as polylines; consecutive steps are joined through the junction
+function routePath(i0, i1, joinAll, kindFn) {
+  const ps = pieces(i0, i1, kindFn || (i => (R.bestM && R.bestM[i] != null) ? 'b' : 's'));
+  const lines = []; let cur = null, prev = null;
+  for (const p of ps) {
+    const off = v => { const i = Math.min(v, p.to); return p.key === 'b' ? R.bestM[i] : (R.offs[i] || 0) * 3.4; };
+    const pts = offsetLine(p.from, p.to + 1, off);
+    const lw = R.seg && R.seg[p.from] && R.seg[p.from].lw || 3.4;
+    if (cur && prev && p.from === prev.to + 1 && (joinAll || p.key === prev.key)) {
+      const A = trimEnd(cur.pts, 12), B = trimStart(pts, 12);
+      cur.pts = A.concat(connector(A, B), B);
+    } else {
+      if (cur) lines.push(cur);
+      cur = { kind: p.key, lw, pts };
+    }
+    prev = p;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/* ---------- Route drawing: real lanes, markings and the planned lane ---------- */
 function buildRouteData(along, force) {
   if (!R) return;
   const ver = LD.ver + '|' + travel;
   if (!force && Math.abs(along - lastBuild.along) < 60 && lastBuild.ver === ver) return;
   lastBuild = { along, ver };
-  const feats = [], i0 = segAt(Math.max(0, along - 25)), iWin = segAt(Math.min(R.total, along + 3500));
-  let run = null, brun = null; recVisible = false;
-  const flush = () => { if (run) emitRun(run, feats); run = null; };
-  for (let i = i0; i < R.c.length - 1; i++) {
-    const si = (i <= iWin && travel === 'drive' && R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
-    const rec = si && R.rec ? R.rec[i] : null;
-    const key = si ? `L${si.n}|${si.ow ? 1 : 0}|${si.bw}|${rec ? rec.join(',') : '-'}` : 'S' + R.offs[i];
-    if (si && R.bestS && R.bestS[i] != null) {
-      if (!brun || brun.step !== R.segStep[i] || brun.last !== i - 1) { if (brun) emitBest(brun, feats); brun = { step: R.segStep[i], from: i, last: i }; }
-      else brun.last = i;
-    } else if (brun) { emitBest(brun, feats); brun = null; }
-    if (!run || run.key !== key) { flush(); run = { key, si, rec, off: R.offs[i], c: [R.c[i]] }; }
-    run.c.push(R.c[i + 1]);
+  const N = R.c.length - 1, feats = [];
+  const i0 = segAt(Math.max(0, along - 25)), iWin = segAt(Math.min(R.total, along + 3500));
+  const lanesAt = i => (travel === 'drive' && i <= iWin && R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
+  recVisible = false;
+  // lanes & markings from map data
+  const lp = pieces(i0, iWin, i => {
+    const si = lanesAt(i); if (!si) return null;
+    const rec = R.rec && R.rec[i];
+    return `${si.n}|${si.ow ? 1 : 0}|${si.bw}|${si.lw}|${rec ? rec.join(',') : '-'}`;
+  });
+  for (const p of lp) emitLanes(p, feats);
+  // planned path: blue line in the chosen lane where lanes are known, plain route line elsewhere
+  const kind = i => (lanesAt(i) && R.bestM && R.bestM[i] != null) ? 'b' : 's';
+  for (const L of routePath(i0, N - 1, false, kind)) {
+    if (L.pts.length < 2) continue;
+    if (L.kind === 'b') recVisible = true;
+    feats.push({ type: 'Feature', properties: L.kind === 'b' ? { k: 'best', wm: L.lw } : { k: 'simple' }, geometry: { type: 'LineString', coordinates: L.pts } });
   }
-  flush();
-  if (brun) emitBest(brun, feats);
   map.getSource('route').setData({ type: 'FeatureCollection', features: feats });
 }
-function emitBest(b, out) {
-  const pts = [];
-  for (let i = b.from; i <= b.last + 1; i++) {
-    const si = Math.min(i, b.last), o = R.bestS[si];
-    const brg = i > b.from && i <= b.last ? smoothAngle(bearing(R.c[i - 1], R.c[i]), bearing(R.c[i], R.c[i + 1]), 0.5) : bearing(R.c[si], R.c[si + 1]);
-    pts.push(shiftLL(R.c[i], brg, o * 3.6));
-  }
-  if (pts.length > 1) { recVisible = true; out.push({ type: 'Feature', properties: { k: 'best' }, geometry: { type: 'LineString', coordinates: pts } }); }
+function emitLanes(p, out) {
+  const si = R.seg[p.from], rec = R.rec && R.rec[p.from];
+  const { n, ow, bw, lw } = si;
+  const stepStart = p.from === 0 || R.segStep[p.from - 1] !== R.segStep[p.from];
+  const stepEnd = p.to >= R.c.length - 2 || R.segStep[p.to + 1] !== R.segStep[p.to];
+  const line = offM => {
+    let pts = offsetLine(p.from, p.to + 1, v => offM + segShift(Math.min(v, p.to)));
+    if (stepStart) pts = trimStart(pts, 10);       // markings stop at intersections
+    if (stepEnd) pts = trimEnd(pts, 10);
+    return pts;
+  };
+  const F = (props, pts) => { if (pts.length > 1) out.push({ type: 'Feature', properties: props, geometry: { type: 'LineString', coordinates: pts } }); };
+  const eL = (ow ? -n / 2 : bw) * lw, eR = (ow ? n / 2 : bw + n) * lw;
+  F({ k: 'car', wm: eR - eL + 0.4 }, line((eL + eR) / 2));
+  for (let j = 0; j < n; j++) F({ k: 'lane', st: rec ? (rec.includes(j) ? 2 : 0) : 1, wm: lw }, line(laneCentre(si, j) * lw));
+  for (let b = 1; b < n; b++) F({ k: 'dash' }, line(eL + b * lw));
+  F({ k: 'edgeR' }, line(eR - 0.15));
+  if (ow || bw) F({ k: 'edgeY' }, line(eL + 0.15));
+  else { F({ k: 'edgeY' }, line(eL - 0.12)); F({ k: 'edgeY' }, line(eL + 0.12)); }   // double yellow on the centreline
 }
-function emitRun(r, out) {
-  const g = { type: 'LineString', coordinates: r.c };
-  const F = p => out.push({ type: 'Feature', properties: p, geometry: g });
-  if (!r.si) { F({ k: 'simple', off: r.off }); return; }
-  const { n, ow, bw } = r.si;
-  const edgeL = ow ? -n / 2 : bw, edgeR = ow ? n / 2 : bw + n;
-  F({ k: 'car', off: (edgeL + edgeR) / 2, w: n + 0.14 });
-  for (let j = 0; j < n; j++) {
-    const st = r.rec ? (r.rec.includes(j) ? 2 : 0) : 1;
-    if (st === 2) recVisible = true;
-    F({ k: 'lane', off: laneCentre(r.si, j), st });
-  }
-  for (let b = 1; b < n; b++) F({ k: 'dash', off: edgeL + b });
-  F({ k: 'edgeR', off: edgeR });
-  F({ k: 'edgeY', off: edgeL, dbl: ow || bw ? 0 : 1 });
-}
-const LANES_W = (expr, minPx) => ['interpolate', ['exponential', 2], ['zoom'], 10, ['*', minPx * 0.5, expr], 14, ['*', Math.max(minPx, 1), expr], 16, ['*', LANE16, expr], 20, ['*', LANE20, expr]];
-const MARK_W = ['interpolate', ['exponential', 2], ['zoom'], 14, 0.4, 16, 0.7, 20, 4];
 function addLaneLayers() {
   const src = 'route', before = 'building-3d';
-  const L = (id, filter, paint, layout) => map.addLayer({ id, type: 'line', source: src, filter, layout: Object.assign({ 'line-join': 'round' }, layout || {}), paint }, before);
-  L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2b3245', 'line-width': LANES_W(['get', 'w'], 1.5), 'line-offset': ROUTE_OFF });
-  L('rt-lane', ['==', ['get', 'k'], 'lane'], {
-    'line-color': '#2f8cff', 'line-width': LANES_W(0.9, 1.2), 'line-offset': ROUTE_OFF,
-    'line-opacity': ['match', ['get', 'st'], 2, 0.42, 1, 0.14, 0] });
-  L('rt-best-casing', ['==', ['get', 'k'], 'best'], { 'line-color': '#0b3a86', 'line-width': LANES_W(1.0, 3.5), 'line-opacity': 0.9 }, { 'line-cap': 'round' });
-  L('rt-best', ['==', ['get', 'k'], 'best'], { 'line-color': '#2f8cff', 'line-width': LANES_W(0.82, 2.6), 'line-opacity': 0.95 }, { 'line-cap': 'round' });
-  L('rt-flow', ['==', ['get', 'k'], 'best'], {
-    'line-color': '#dff0ff', 'line-width': LANES_W(0.3, 0.6), 'line-opacity': 0.75, 'line-dasharray': [0, 4, 3] });
-  L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-width': MARK_W, 'line-offset': ROUTE_OFF, 'line-dasharray': [4, 7] });
-  L('rt-edgeR', ['==', ['get', 'k'], 'edgeR'], { 'line-color': '#f2f5fb', 'line-width': MARK_W, 'line-offset': ROUTE_OFF });
-  L('rt-edgeY', ['==', ['get', 'k'], 'edgeY'], { 'line-color': '#f0c23b', 'line-width': MARK_W, 'line-offset': ROUTE_OFF,
-    'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 14, ['*', ['get', 'dbl'], 0.4], 16, ['*', ['get', 'dbl'], 0.8], 20, ['*', ['get', 'dbl'], 5]] });
-  map.addLayer({ id: 'route-casing', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'butt', 'line-join': 'round' },
-    paint: { 'line-color': '#0b3a86', 'line-width': ROUTE_W(1.0, 6), 'line-offset': ROUTE_OFF, 'line-opacity': 0.9 } }, before);
-  map.addLayer({ id: 'route-line', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'butt', 'line-join': 'round' },
-    paint: { 'line-color': '#3d9bff', 'line-width': ROUTE_W(0.78, 3.8), 'line-offset': ROUTE_OFF, 'line-opacity': 0.92 } }, before);
-  // painted lane arrows
+  const L = (id, filter, paint, layout) => map.addLayer({ id, type: 'line', source: src, filter,
+    layout: Object.assign({ 'line-join': 'round' }, layout || {}), paint }, before);
+  L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2b3245' });
+  L('rt-lane', ['==', ['get', 'k'], 'lane'], { 'line-color': '#2f8cff', 'line-opacity': ['match', ['get', 'st'], 2, 0.42, 1, 0.14, 0] });
+  L('rt-best-casing', ['==', ['get', 'k'], 'best'], { 'line-color': '#0b3a86', 'line-opacity': 0.9 }, { 'line-cap': 'round' });
+  L('rt-best', ['==', ['get', 'k'], 'best'], { 'line-color': '#2f8cff', 'line-opacity': 0.95 }, { 'line-cap': 'round' });
+  L('rt-flow', ['==', ['get', 'k'], 'best'], { 'line-color': '#dff0ff', 'line-opacity': 0.75, 'line-dasharray': [0, 4, 3] });
+  L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-dasharray': [4, 7] });   // markings sit ON TOP of the blue line
+  L('rt-edgeR', ['==', ['get', 'k'], 'edgeR'], { 'line-color': '#f2f5fb' });
+  L('rt-edgeY', ['==', ['get', 'k'], 'edgeY'], { 'line-color': '#f0c23b' });
+  map.addLayer({ id: 'route-casing', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#0b3a86', 'line-opacity': 0.9 } }, before);
+  map.addLayer({ id: 'route-line', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#3d9bff', 'line-opacity': 0.92 } }, before);
   map.addSource('arrows', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   map.addLayer({ id: 'rt-arrows', type: 'symbol', source: 'arrows',
     layout: { 'icon-image': ['get', 'icon'], 'icon-rotate': ['get', 'b'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map',
-      'icon-allow-overlap': true, 'icon-ignore-placement': true,
-      'icon-size': ['interpolate', ['exponential', 2], ['zoom'], 14, 0.02, 16, 0.075, 20, 1.2] } }, before);
+      'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-size': 0.1 } }, before);
 }
 // animated "flow" along recommended lanes (only runs while one is on screen)
 const DASH_SEQ = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
@@ -1293,7 +1466,7 @@ function renderLaneArrows(k) {
     if (!si || si.n !== g.nBar) continue;
     const p = pointAt(d);
     g.bar.forEach((b, j) => feats.push({ type: 'Feature', properties: { icon: ensureArrowIcon(b.ind, b.ok), b: p.bearing },
-      geometry: { type: 'Point', coordinates: shiftLL(p.pt, p.bearing, laneCentre(si, j) * 3.6) } }));
+      geometry: { type: 'Point', coordinates: shiftLL(p.pt, p.bearing, laneM(segAt(d), j)) } }));
   }
   map.getSource('arrows').setData({ type: 'FeatureCollection', features: feats });
 }
@@ -1611,6 +1784,7 @@ function navUpdate(f) {
   $('nbSub').textContent = fmtDur(tLeft) + ' · ' + rd.v + ' ' + rd.u;
   $('spVal').textContent = Math.round((f.speed || 0) * 2.237);
 
+  if (setScale(f.lat)) { applyScale(); lastBuild.ver = null; }
   // lane data + your lane
   const segI = Math.min(s.i, R.seg.length - 1), si = R.seg[segI];
   if (!walk) { loadLaneData(along); updateLaneEstimate(s, f, on ? si : null); }
@@ -1661,9 +1835,9 @@ function navUpdate(f) {
   let offM;
   if (!on) offM = 0;
   else if (lanesKnown) {
-    if (LE.conf && LE.lane != null) offM = laneCentre(si, LE.lane) * 3.6;
-    else offM = (R.bestS && R.bestS[segI] != null ? R.bestS[segI] : laneCentre(si, (si.n - 1) / 2)) * 3.6;
-  } else offM = R.offs[segI] * 3.6;
+    if (LE.conf && LE.lane != null) offM = laneM(segI, LE.lane);
+    else offM = R.bestM && R.bestM[segI] != null ? R.bestM[segI] : laneM(segI, (si.n - 1) / 2);
+  } else offM = plannedM(segI);
   carOffS = carOffS == null ? offM : carOffS + (offM - carOffS) * 0.35;
   const carPos = on ? shiftLL(pos, s.bearing, carOffS) : pos;
   carMarker.setLngLat(carPos).setRotation(lastHeading);
@@ -1749,7 +1923,7 @@ function startSim() {
       simLane = Math.min(simLane, si.n - 1);
       const tgt = R.best && R.best[i];
       if (tgt != null && tgt !== simLane && Date.now() - simLaneT > 2200) { simLane += Math.sign(tgt - simLane); simLaneT = Date.now(); }
-      latM = laneCentre(si, simLane) * 3.6;
+      latM = laneM(i, simLane);
     } else simLane = null;
     const pt = latM ? shiftLL(p.pt, p.bearing, latM) : p.pt;
     navUpdate({ lon: pt[0], lat: pt[1], speed: v, heading: p.bearing, acc: 3, sim: true });
@@ -1769,6 +1943,7 @@ function startGPS() {
       carMarker.setLngLat([gps.lon, gps.lat]);
       if (gps.heading != null && !isNaN(gps.heading) && gps.speed > 1) carMarker.setRotation(gps.heading);
       if (!carMarker._map) carMarker.addTo(map);
+      if (firstFix && setScale(gps.lat)) applyScale();
       if (firstFix && mode === 'search') { firstFix = false; map.flyTo({ center: [gps.lon, gps.lat], zoom: 16, pitch: 50, duration: 1500 }); }
     }
   }, err => {
@@ -1809,6 +1984,8 @@ function init() {
     map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     addLaneLayers();
     addTurnLayers();
+    if (gps) setScale(gps.lat);
+    applyScale();
     applyTheme(); syncThemeUI();
     const L = $('loading'); L.style.opacity = 0; setTimeout(() => L.remove(), 450);
   });
