@@ -202,14 +202,62 @@ const $ = id => document.getElementById(id);
 /* ---------- Map style: simple dark "satnav" look from OpenFreeMap vector tiles ---------- */
 const NAME = ['coalesce', ['get', 'name:en'], ['get', 'name']];
 const isLine = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false];
-function road(id, classes, color, w, extra) {
-  return Object.assign({
-    id, type: 'line', source: 'omt', 'source-layer': 'transportation',
-    filter: ['all', isLine, ['match', ['get', 'class'], classes, true, false]],
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': color,
-      'line-width': ['interpolate', ['exponential', 1.7], ['zoom'], 8, w[0], 12, w[1], 16, w[2], 19, w[3]] }
-  }, extra || {});
+// Real-world scale: one 3.6 m lane in screen px (512px tiles, ~40°N)
+const LANE16 = 3.94, LANE20 = 63;
+const lanePx = (k, z12) => ['interpolate', ['exponential', 2], ['zoom'], 8, 0, 12, z12 == null ? 0 : z12, 16, ['*', LANE16, k], 20, ['*', LANE20, k]];
+const RAMP = ['==', ['coalesce', ['get', 'ramp'], 0], 1];
+const TWOWAY = ['==', ['coalesce', ['get', 'oneway'], 0], 0];
+const CLS = c => ['match', ['get', 'class'], c, true, false];
+const LEQ = { // road width in "lanes" (incl. shoulders)
+  motorway: ['case', RAMP, 1.5, 3.6],
+  major: ['case', RAMP, 1.5, ['case', TWOWAY, 4.4, 2.6]],
+  secondary: ['case', TWOWAY, 2.8, 2.0], tertiary: 2.4, minor: 2.1, service: 1.3, path: 0.55
+};
+function roadW(leq, z8, z12) { return ['interpolate', ['exponential', 2], ['zoom'], 8, z8, 12, z12, 16, ['max', z12 * 2, ['*', LANE16, leq]], 20, ['*', LANE20, leq]]; }
+function rl(id, classes, leq, color, z8, z12, more) {
+  return Object.assign({ id, type: 'line', source: 'omt', 'source-layer': 'transportation',
+    filter: ['all', isLine, CLS(classes)], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': color, 'line-width': roadW(leq, z8, z12) } }, more || {});
+}
+const ROAD_GROUPS = [ // drawn bottom → top
+  ['service', ['service', 'track'], LEQ.service, '#232a39', 0, 0.6],
+  ['minor', ['minor'], LEQ.minor, '#283041', 0.3, 1.2],
+  ['tertiary', ['tertiary'], LEQ.tertiary, '#2c3446', 0.5, 1.6],
+  ['secondary', ['secondary'], LEQ.secondary, '#2e3749', 0.7, 2],
+  ['major', ['primary', 'trunk'], LEQ.major, '#323b4f', 1, 2.8],
+  ['motorway', ['motorway'], LEQ.motorway, '#363f55', 1.2, 3.4]
+];
+function roadLayers() {
+  const L = [];
+  // sidewalks along town roads
+  L.push({ id: 'sidewalk', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 16,
+    filter: ['all', isLine, CLS(['minor', 'tertiary', 'secondary', 'primary']), TWOWAY],
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': '#394259', 'line-width': lanePx(0.5),
+      'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 16, ['*', LANE16, ['+', ['match', ['get', 'class'], 'minor', 2.1, 'tertiary', 2.4, 'secondary', 2.8, 4.4], 0.3]],
+        20, ['*', LANE20, ['+', ['match', ['get', 'class'], 'minor', 2.1, 'tertiary', 2.4, 'secondary', 2.8, 4.4], 0.3]]] } });
+  // white edge lines (casing) then asphalt, per class
+  for (const [id, cls, leq, col, z8, z12] of ROAD_GROUPS) {
+    L.push(rl('edge-' + id, cls, ['+', leq, 0.16], '#a7b0c4', z8, z12, { minzoom: 15,
+      paint: { 'line-color': '#a7b0c4', 'line-width': roadW(['+', leq, 0.16], z8, z12),
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0, 16.5, 0.9] } }));
+  }
+  for (const [id, cls, leq, col, z8, z12] of ROAD_GROUPS) L.push(rl('road-' + id, cls, leq, col, z8, z12));
+  // double yellow centre line on two-way roads
+  L.push({ id: 'centre-yellow', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 15,
+    filter: ['all', isLine, CLS(['motorway', 'trunk', 'primary', 'secondary', 'tertiary']), TWOWAY, ['!', RAMP]],
+    paint: { 'line-color': '#e2b93b', 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 15, 0.4, 16, 0.6, 20, 3.5],
+      'line-gap-width': ['interpolate', ['exponential', 2], ['zoom'], 15, 0.4, 16, 0.6, 20, 4] } });
+  // dashed white lane dividers: 3-lane one-way carriageways (±½ lane) and 4-lane two-way roads (±1 lane)
+  const dash = { 'line-color': 'rgba(235,240,250,.85)', 'line-dasharray': [5, 9],
+    'line-width': ['interpolate', ['exponential', 2], ['zoom'], 16, 0.6, 20, 3.2] };
+  L.push({ id: 'lanes-oneway', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 16,
+    filter: ['all', isLine, CLS(['motorway', 'trunk', 'primary']), ['!', TWOWAY], ['!', RAMP]],
+    paint: Object.assign({ 'line-gap-width': lanePx(1) }, dash) });
+  L.push({ id: 'lanes-twoway', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 16,
+    filter: ['all', isLine, CLS(['trunk', 'primary']), TWOWAY, ['!', RAMP]],
+    paint: Object.assign({ 'line-gap-width': lanePx(2) }, dash) });
+  return L;
 }
 const STYLE = {
   version: 8,
@@ -226,17 +274,10 @@ const STYLE = {
       filter: ['match', ['get', 'class'], ['wood', 'grass'], true, false],
       paint: { 'fill-color': '#112419', 'fill-opacity': 0.8 } },
     { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#132a4a' } },
-    road('road-path', ['path'], '#3b4a6b', [0, 0.4, 2, 5], { minzoom: 15,
-      paint: { 'line-color': '#4a5b80', 'line-dasharray': [1.5, 1.2],
-        'line-width': ['interpolate', ['linear'], ['zoom'], 15, 1, 19, 4] } }),
-    road('road-service', ['service', 'track'], '#1f2940', [0.3, 0.8, 5, 12], { minzoom: 13 }),
-    road('road-minor', ['minor'], '#2a3652', [0.4, 1.2, 9, 22]),
-    road('road-mid', ['secondary', 'tertiary'], '#384664', [0.7, 2, 13, 30]),
-    road('road-major', ['primary', 'trunk'], '#46557a', [1, 2.8, 16, 36]),
-    road('road-motorway', ['motorway'], '#5b6b93', [1.2, 3.4, 20, 44]),
-    road('road-center', ['primary', 'trunk', 'secondary', 'motorway'], '#c9a227', [0, 0.3, 1.2, 2.4],
-      { minzoom: 15, paint: { 'line-color': '#c9a227', 'line-dasharray': [3, 3],
-        'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0.6, 19, 2.4] } }),
+    { id: 'road-path', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 15,
+      filter: ['all', isLine, CLS(['path'])],
+      paint: { 'line-color': '#4a5b80', 'line-dasharray': [1.5, 1.2], 'line-width': roadW(LEQ.path, 0, 0.8) } },
+    ...roadLayers(),
     { id: 'building-3d', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 14,
       paint: { 'fill-extrusion-color': '#223050',
         'fill-extrusion-height': ['*', 0.8, ['coalesce', ['get', 'render_height'], 6]],
@@ -441,6 +482,9 @@ function renderLanes(k, dTurn, far, near) {
 }
 
 /* ---------- Turn arrow painted on the road ---------- */
+// width in lanes (min px when zoomed out); offset follows each segment's lane
+const ROUTE_W = (k, minPx) => ['interpolate', ['exponential', 2], ['zoom'], 8, minPx * 0.7, 13, minPx, 16, Math.max(minPx * 0.9, LANE16 * k), 20, LANE20 * k];
+const ROUTE_OFF = ['interpolate', ['exponential', 2], ['zoom'], 13, 0, 16, ['*', LANE16, ['coalesce', ['get', 'off'], 0]], 20, ['*', LANE20, ['coalesce', ['get', 'off'], 0]]];
 let turnKey = '';
 function renderTurnArrow(k, dTurn, far) {
   const st = R.steps[k];
@@ -455,8 +499,9 @@ function renderTurnArrow(k, dTurn, far) {
   const coords = [pointAt(a).pt];
   for (let i = 0; i < R.cum.length; i++) if (R.cum[i] > a && R.cum[i] < b) coords.push(R.c[i]);
   const end = pointAt(b); coords.push(end.pt);
-  map.getSource('turn').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
-  map.getSource('turnhead').setData({ type: 'Feature', properties: { b: end.bearing }, geometry: { type: 'Point', coordinates: end.pt } });
+  const oIn = R.offs[segAt(R.starts[k] - 3)], oOut = R.offs[segAt(b - 1)];
+  map.getSource('turn').setData({ type: 'Feature', properties: { off: oIn }, geometry: { type: 'LineString', coordinates: coords } });
+  map.getSource('turnhead').setData({ type: 'Feature', properties: { b: end.bearing }, geometry: { type: 'Point', coordinates: shiftLL(end.pt, end.bearing, oOut * 3.6) } });
 }
 function addTurnLayers() {
   const cv = document.createElement('canvas'); cv.width = cv.height = 64;
@@ -468,13 +513,13 @@ function addTurnLayers() {
   map.addSource('turn', { type: 'geojson', data: empty });
   map.addSource('turnhead', { type: 'geojson', data: empty });
   map.addLayer({ id: 'turn-casing', type: 'line', source: 'turn', layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#0b3a86', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 14, 10, 18, 30] } }, 'road-label');
+    paint: { 'line-color': '#0b3a86', 'line-width': ROUTE_W(0.95, 5), 'line-offset': ROUTE_OFF } }, 'road-label');
   map.addLayer({ id: 'turn-line', type: 'line', source: 'turn', layout: { 'line-cap': 'butt', 'line-join': 'round' },
-    paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 14, 5, 18, 18] } }, 'road-label');
+    paint: { 'line-color': '#ffffff', 'line-width': ROUTE_W(0.55, 2.5), 'line-offset': ROUTE_OFF } }, 'road-label');
   map.addLayer({ id: 'turn-head', type: 'symbol', source: 'turnhead',
     layout: { 'icon-image': 'turnhead', 'icon-rotate': ['get', 'b'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map',
       'icon-allow-overlap': true, 'icon-ignore-placement': true,
-      'icon-size': ['interpolate', ['exponential', 1.6], ['zoom'], 14, 0.25, 18, 0.9] } }, 'road-label');
+      'icon-size': ['interpolate', ['exponential', 2], ['zoom'], 14, 0.12, 16, 0.2, 20, 2.4] } }, 'road-label');
 }
 
 /* ---------- Instruction text ---------- */
@@ -702,18 +747,65 @@ async function getRoute(from, to, heading) {
   return j.routes[0];
 }
 function prepare(rt) {
-  const c = rt.geometry.coordinates;
-  const cum = [0];
-  for (let i = 1; i < c.length; i++) cum.push(cum[i - 1] + hav(c[i - 1], c[i]));
+  const c0 = rt.geometry.coordinates;
+  const cum0 = [0];
+  for (let i = 1; i < c0.length; i++) cum0.push(cum0[i - 1] + hav(c0[i - 1], c0[i]));
   const steps = rt.legs[0].steps, starts = [];
   let idx = 0;
-  for (const s of steps) { starts.push(cum[Math.min(idx, c.length - 1)]); idx += Math.max(0, s.geometry.coordinates.length - 1); }
-  return { c, cum, total: cum[cum.length - 1], steps, starts, duration: rt.duration, distance: rt.distance };
+  for (const s of steps) { starts.push(cum0[Math.min(idx, c0.length - 1)]); idx += Math.max(0, s.geometry.coordinates.length - 1); }
+  // densify to ≤20 m so the lane ribbon can shift smoothly
+  const c = [c0[0]], cum = [0];
+  for (let i = 1; i < c0.length; i++) {
+    const a = c0[i - 1], b = c0[i], L = cum0[i] - cum0[i - 1], n = Math.max(1, Math.ceil(L / 20));
+    for (let j = 1; j <= n; j++) { const t = j / n; c.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); cum.push(cum0[i - 1] + L * t); }
+  }
+  const motor = steps.map(s => (s.intersections || []).some(x => (x.classes || []).includes('motorway')));
+  return { c, cum, total: cum[cum.length - 1], steps, starts, motor, duration: rt.duration, distance: rt.distance };
+}
+// Lane offset (in lanes, + = right of road centre) for each route segment
+function computeOffsets() {
+  const zones = [];
+  const walk = travel === 'walk';
+  if (!walk) for (let k = 1; k < R.steps.length; k++) {
+    const L = lanesFor(k); if (!L) continue;
+    const v = []; L.forEach((l, i) => { if (l.valid) v.push(i); });
+    if (!v.length) continue;
+    const n = L.length, ci = (v[0] + v[v.length - 1]) / 2;
+    const t = R.motor[k - 1] ? ci - (n - 1) / 2 : ci + 0.5;
+    zones.push({ a: R.starts[k] - 240, b: R.starts[k] + 4, t: Math.max(-2.5, Math.min(3.5, t)) });
+  }
+  const base = d => walk ? 0 : (R.motor[stepAt(d)] ? 0 : 0.5);
+  const offAt = d => {
+    let o = base(d);
+    for (const z of zones) if (d >= z.a && d <= z.b) o += (z.t - o) * Math.min(1, (d - z.a) / 70);
+    return o;
+  };
+  R.offs = [];
+  for (let i = 0; i < R.c.length - 1; i++) R.offs.push(Math.round(offAt((R.cum[i] + R.cum[i + 1]) / 2) * 10) / 10);
+}
+function segAt(d) {
+  let lo = 0, hi = R.cum.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (R.cum[m] <= d) lo = m; else hi = m; }
+  return Math.min(lo, R.offs.length - 1);
+}
+function shiftLL(pt, brg, m) { // move a point m metres to the right of heading brg
+  const b = toRad(brg + 90);
+  return [pt[0] + Math.sin(b) * m / (111320 * Math.cos(toRad(pt[1]))), pt[1] + Math.cos(b) * m / 110540];
+}
+function routeFC(i0, pos) {
+  const out = []; let cur = null;
+  for (let i = i0; i < R.c.length - 1; i++) {
+    const o = R.offs[i];
+    if (!cur || cur.o !== o) { cur = { o, c: [cur ? cur.c[cur.c.length - 1] : (pos || R.c[i])] }; out.push(cur); }
+    cur.c.push(R.c[i + 1]);
+  }
+  return { type: 'FeatureCollection', features: out.map(f => ({ type: 'Feature', properties: { off: f.o }, geometry: { type: 'LineString', coordinates: f.c } })) };
 }
 function setRoute(rt) {
   R = prepare(rt);
+  computeOffsets();
   lastSnapSeg = 0; lastAlong = 0; announced = {}; laneKey = ''; turnKey = '';
-  map.getSource('route').setData({ type: 'Feature', geometry: rt.geometry });
+  map.getSource('route').setData(routeFC(0));
 }
 function snap(lon, lat) {
   const c = R.c, n = c.length, kx = 111320 * Math.cos(toRad(lat)), ky = 110540;
@@ -949,13 +1041,14 @@ function navUpdate(f) {
   if (dTurn <= near && !a.near) { a.near = a.far = 1; say(instr(step) + (nxt && (R.starts[k + 1] - R.starts[k]) < 250 ? ', then ' + instr(nxt) : '')); }
 
   // car + remaining route line
-  carMarker.setLngLat(pos).setRotation(lastHeading);
+  const carPos = on ? shiftLL(pos, s.bearing, R.offs[Math.min(s.i, R.offs.length - 1)] * 3.6) : pos;
+  carMarker.setLngLat(carPos).setRotation(lastHeading);
   if (!carMarker._map) carMarker.addTo(map);
-  if (on) map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [pos].concat(R.c.slice(s.i + 1)) } });
+  if (on) map.getSource('route').setData(routeFC(s.i, pos));
 
   // camera
   if (following) {
-    map.easeTo({ center: pos, bearing: lastHeading, pitch: walk ? 50 : 62, zoom: walk ? 18.6 : speedZoom(f.speed),
+    map.easeTo({ center: carPos, bearing: lastHeading, pitch: walk ? 50 : 62, zoom: walk ? 18.6 : speedZoom(f.speed),
       duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * 0.2] });
   }
 }
@@ -1065,10 +1158,10 @@ function init() {
 
   map.on('load', () => {
     map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#0b3a86', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 8, 6, 14, 12, 18, 34] } }, 'building-3d');
-    map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#3d9bff', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 8, 3.5, 14, 8, 18, 24] } }, 'building-3d');
+    map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'butt', 'line-join': 'round' },
+      paint: { 'line-color': '#0b3a86', 'line-width': ROUTE_W(1.0, 6), 'line-offset': ROUTE_OFF, 'line-opacity': 0.9 } }, 'building-3d');
+    map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-cap': 'butt', 'line-join': 'round' },
+      paint: { 'line-color': '#3d9bff', 'line-width': ROUTE_W(0.78, 3.8), 'line-offset': ROUTE_OFF, 'line-opacity': 0.92 } }, 'building-3d');
     addTurnLayers();
     const L = $('loading'); L.style.opacity = 0; setTimeout(() => L.remove(), 450);
   });
