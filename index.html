@@ -83,6 +83,18 @@
   .lane.ok{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4)}
   #lanes.now .lane.ok{background:#2f8cff;border-color:#fff;animation:lanePulse .9s ease-in-out infinite}
   #lanes.now .lane:not(.ok){opacity:.45}
+  .modes{display:flex;background:rgba(255,255,255,.07);border-radius:12px;padding:3px;margin-top:14px}
+  .modes button{flex:1;height:40px;border-radius:10px;font-weight:700;font-size:15px;color:var(--sub)}
+  .modes button.on{background:var(--blue);color:#fff}
+  #finder{position:fixed;left:50%;bottom:calc(var(--sb) + 110px);transform:translateX(-50%);z-index:6;width:min(92vw,360px);
+    background:var(--panel);border-radius:22px;padding:16px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.55)}
+  #fArrow{width:120px;height:120px;margin:0 auto;transition:transform .25s linear}
+  #fDist{font-size:34px;font-weight:800;margin-top:6px}
+  #fName{font-size:17px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #fTip{font-size:13px;color:var(--sub);margin-top:6px;line-height:1.35}
+  #walkOn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 100px);z-index:7;background:var(--blue);color:#fff;
+    font-weight:800;font-size:17px;padding:15px 24px;border-radius:30px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  body.walk #speed{display:none!important}
   @keyframes lanePulse{50%{transform:scale(1.08);box-shadow:0 0 14px rgba(120,190,255,.9)}}
 
   #navBar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);display:flex;align-items:center;gap:10px;
@@ -133,6 +145,7 @@
   <div class="pv-addr" id="pvAddr"></div>
   <div class="pv-stats"><span id="pvTime">–</span><span id="pvDist"></span></div>
   <div class="pv-eta" id="pvEta"></div>
+  <div class="modes"><button id="mDrive" class="on">🚗 Drive</button><button id="mWalk">🚶 Walk</button></div>
   <div class="row">
     <button id="cancelBtn" class="btn ghost">Cancel</button>
     <button id="driveBtn" class="btn go">Drive</button>
@@ -160,6 +173,13 @@
 <button id="locBtn" class="fab" aria-label="My location">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="#2f8cff"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"/></svg>
 </button>
+<div id="finder" class="hidden">
+  <div id="fArrow"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="rgba(47,140,255,.12)" stroke="rgba(47,140,255,.5)" stroke-width="2"/><path d="M50 10 L74 72 L50 60 L26 72 Z" fill="#2f8cff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg></div>
+  <div id="fDist"></div>
+  <div id="fName"></div>
+  <div id="fTip">Hold your phone flat and follow the arrow. GPS is less accurate indoors — look for signs and the store directory too.</div>
+</div>
+<button id="walkOn" class="hidden">🚶 Walk the rest</button>
 <div id="status" class="hidden"></div>
 <div id="toast" class="hidden"></div>
 <div id="loading"><div class="logo">Road<span>View</span></div><div class="sub">Loading map…</div></div>
@@ -196,6 +216,9 @@ const STYLE = {
       filter: ['match', ['get', 'class'], ['wood', 'grass'], true, false],
       paint: { 'fill-color': '#112419', 'fill-opacity': 0.8 } },
     { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#132a4a' } },
+    road('road-path', ['path'], '#3b4a6b', [0, 0.4, 2, 5], { minzoom: 15,
+      paint: { 'line-color': '#4a5b80', 'line-dasharray': [1.5, 1.2],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 15, 1, 19, 4] } }),
     road('road-service', ['service', 'track'], '#1f2940', [0.3, 0.8, 5, 12], { minzoom: 13 }),
     road('road-minor', ['minor'], '#2a3652', [0.4, 1.2, 9, 22]),
     road('road-mid', ['secondary', 'tertiary'], '#384664', [0.7, 2, 13, 30]),
@@ -213,6 +236,12 @@ const STYLE = {
       layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ['Noto Sans Regular'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 13, 11, 18, 15], 'text-max-angle': 30 },
       paint: { 'text-color': '#cfd8ea', 'text-halo-color': '#0e1626', 'text-halo-width': 1.6 } },
+    { id: 'poi-label', type: 'symbol', source: 'omt', 'source-layer': 'poi', minzoom: 16.5,
+      filter: ['has', 'name'],
+      layout: { 'text-field': NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-max-width': 8,
+        'text-anchor': 'top', 'text-offset': [0, 0.4] },
+      paint: { 'text-color': ['match', ['get', 'class'], ['shop', 'clothing_store', 'grocery'], '#ffd38a', ['restaurant', 'fast_food', 'cafe'], '#ffa9a9', '#b9c7e3'],
+        'text-halo-color': '#0e1626', 'text-halo-width': 1.6 } },
     { id: 'place-label', type: 'symbol', source: 'omt', 'source-layer': 'place',
       filter: ['match', ['get', 'class'], ['city', 'town', 'village', 'state'], true, false],
       layout: { 'text-field': NAME, 'text-font': ['Noto Sans Bold'],
@@ -230,6 +259,14 @@ let following = true, lastHeading = 0, lastAlong = 0, lastSnapSeg = 0;
 let offCount = 0, lastReroute = 0, rerouting = false, arrived = false;
 let sim = null, wakeLock = null, muted = false, announced = {};
 let searchTimer = null, searchSeq = 0;
+let travel = 'drive', compass = null;
+window.addEventListener('deviceorientation', e => {
+  if (e.webkitCompassHeading != null) compass = e.webkitCompassHeading;
+  else if (e.absolute && e.alpha != null) compass = (360 - e.alpha) % 360;
+}, true);
+async function askCompass() {
+  try { if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
+}
 
 /* ---------- Helpers ---------- */
 const toRad = d => d * Math.PI / 180, toDeg = r => r * 180 / Math.PI;
@@ -432,7 +469,7 @@ function addTurnLayers() {
 
 /* ---------- Instruction text ---------- */
 const side = mod => (mod || '').includes('left') ? 'left' : 'right';
-function compass(b) { return ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(((b || 0) % 360) / 45) % 8]; }
+function compassWord(b) { return ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(((b || 0) % 360) / 45) % 8]; }
 function instr(step) {
   if (!step) return '';
   const m = step.maneuver, t = m.type, mod = m.modifier || '';
@@ -441,7 +478,7 @@ function instr(step) {
   const onto = name ? ' onto ' + name : '';
   const toward = step.destinations ? ' toward ' + step.destinations.split(',')[0].replace(/^[^:]*:\s*/, '') : '';
   switch (t) {
-    case 'depart': return 'Head ' + compass(m.bearing_after) + (name ? ' on ' + name : '');
+    case 'depart': return 'Head ' + compassWord(m.bearing_after) + (name ? ' on ' + name : '');
     case 'arrive': return 'Arrive at your destination' + (mod && mod !== 'straight' ? ', on the ' + side(mod) : '');
     case 'merge': return 'Merge ' + side(mod) + onto;
     case 'on ramp': return 'Take the ramp' + (mod && mod !== 'straight' ? ' on the ' + side(mod) : '') + (toward || onto);
@@ -514,10 +551,19 @@ $('clearQ').onclick = () => { $('q').value = ''; renderResults(null); $('clearQ'
 
 /* ---------- Routing (OSRM) ---------- */
 async function getRoute(from, to, heading) {
-  let url = `https://router.project-osrm.org/route/v1/driving/${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=true`;
-  if (heading != null && !isNaN(heading)) url += `&bearings=${Math.round(heading) % 360},60;`;
-  const r = await fetch(url);
-  const j = await r.json();
+  const pts = `${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=true`;
+  let url = travel === 'walk'
+    ? `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${pts}`
+    : `https://router.project-osrm.org/route/v1/driving/${pts}`;
+  if (travel === 'drive' && heading != null && !isNaN(heading)) url += `&bearings=${Math.round(heading) % 360},60;`;
+  let j;
+  try { const r = await fetch(url); j = await r.json(); if (j.code !== 'Ok') throw 0; }
+  catch (e) {
+    if (travel !== 'walk') throw e;
+    const r2 = await fetch(`https://router.project-osrm.org/route/v1/driving/${pts}`);
+    j = await r2.json();
+    if (j.routes) j.routes.forEach(rt => { rt.duration = rt.distance / 1.35; rt.legs.forEach(l => l.steps.forEach(st => st.duration = st.distance / 1.35)); });
+  }
   if (j.code !== 'Ok' || !j.routes || !j.routes.length) throw new Error(j.message || 'No route');
   return j.routes[0];
 }
@@ -566,23 +612,25 @@ function pointAt(d) {
 function stepAt(d) { let k = 0; for (let i = 0; i < R.starts.length; i++) if (R.starts[i] <= d) k = i; return k; }
 
 /* ---------- Flow: pick → preview → drive ---------- */
-async function pickDest(place) {
+async function pickDest(place, fromLL) {
   $('q').blur();
   renderResults(null);
   dest = place;
-  const from = gps ? [gps.lon, gps.lat] : null;
+  const from = fromLL || (gps ? [gps.lon, gps.lat] : null);
   if (!from) { toast('Waiting for your GPS location… (allow Location for this site)'); return; }
   setMode('preview');
   $('pvName').textContent = place.name; $('pvAddr').textContent = place.addr || '';
   $('pvTime').textContent = 'Finding route…'; $('pvDist').textContent = ''; $('pvEta').textContent = '';
   $('driveBtn').disabled = true;
+  $('driveBtn').textContent = travel === 'walk' ? 'Walk' : 'Drive';
+  $('mDrive').classList.toggle('on', travel === 'drive'); $('mWalk').classList.toggle('on', travel === 'walk');
   destMarker.setLngLat(place.ll).addTo(map);
   try {
     const rt = await getRoute(from, place.ll);
     setRoute(rt);
     $('pvTime').textContent = fmtDur(rt.duration);
     const d = fmtDist(rt.distance); $('pvDist').textContent = d.v + ' ' + d.u;
-    $('pvEta').textContent = 'Arrive around ' + clock(rt.duration);
+    $('pvEta').textContent = 'Arrive around ' + clock(rt.duration) + (travel === 'walk' ? ' · walking' : '');
     $('driveBtn').disabled = false;
     const b = new maplibregl.LngLatBounds();
     rt.geometry.coordinates.forEach(p => b.extend(p));
@@ -606,16 +654,35 @@ function setMode(m) {
 }
 
 $('cancelBtn').onclick = () => endTrip();
+$('mDrive').onclick = () => { if (travel !== 'drive' && dest) { travel = 'drive'; pickDest(dest); } };
+$('mWalk').onclick = () => { askCompass(); if (travel !== 'walk' && dest) { travel = 'walk'; pickDest(dest); } };
+$('walkOn').onclick = async () => {
+  $('walkOn').classList.add('hidden');
+  const place = dest; travel = 'walk';
+  const ll = carMarker.getLngLat();
+  await pickDest(place, [ll.lng, ll.lat]);
+  if (R) $('driveBtn').onclick();
+};
+function walkLook(on) {
+  try {
+    map.setPaintProperty('building-3d', 'fill-extrusion-opacity', on ? 0.35 : 0.85);
+    map.setPaintProperty('route-line', 'line-dasharray', on ? [1, 1.4] : undefined);
+    map.setPaintProperty('route-line', 'line-color', on ? '#5fb0ff' : '#3d9bff');
+  } catch (e) {}
+}
 $('driveBtn').onclick = () => {
   if (!R) return;
+  if (travel === 'walk') askCompass();
+  walkLook(travel === 'walk');
   unlockVoice();
   requestWake();
   setMode('nav');
-  arrived = false; following = true; offCount = 0;
+  document.body.classList.toggle('walk', travel === 'walk');
+  arrived = false; following = true; offCount = 0; finderAnnounced = false;
   const first = R.steps[0];
   lastHeading = first && first.maneuver ? first.maneuver.bearing_after || 0 : 0;
   const start = gps ? [gps.lon, gps.lat] : R.c[0];
-  map.jumpTo({ center: start, zoom: 17.3, pitch: 62, bearing: lastHeading });
+  map.jumpTo({ center: start, zoom: travel === 'walk' ? 18.6 : 17.3, pitch: travel === 'walk' ? 50 : 62, bearing: lastHeading });
   setTimeout(() => say('Starting route. ' + instr(R.steps[0]) + (R.steps[1] ? '. Then ' + instr(R.steps[1]) : '')), 300);
   if ($('simChk').checked) startSim();
   else if (gps) navUpdate(gps);
@@ -631,6 +698,8 @@ $('locBtn').onclick = () => {
 function endTrip() {
   stopSim();
   R = null; dest = null; arrived = false;
+  travel = 'drive'; walkLook(false);
+  $('finder').classList.add('hidden'); $('walkOn').classList.add('hidden');
   const empty = { type: 'FeatureCollection', features: [] };
   ['route', 'turn', 'turnhead'].forEach(s => map.getSource(s) && map.getSource(s).setData(empty));
   $('lanes').classList.add('hidden'); $('banner').classList.remove('close'); laneKey = ''; turnKey = '';
@@ -653,13 +722,16 @@ function speedZoom(v) {
 function navUpdate(f) {
   if (!R || arrived) return;
   const s = snap(f.lon, f.lat);
-  const tol = Math.max(35, Math.min(f.acc || 0, 80));
+  const walk = travel === 'walk';
+  const tol = walk ? Math.max(25, Math.min(f.acc || 0, 60)) : Math.max(35, Math.min(f.acc || 0, 80));
   const on = s.d < tol;
   offCount = on ? 0 : offCount + 1;
-  if (offCount >= 3 && !rerouting && !sim && Date.now() - lastReroute > 8000) reroute(f);
+  const toDest = hav([f.lon, f.lat], dest.ll);
+  if (offCount >= (walk ? 6 : 3) && !rerouting && !sim && Date.now() - lastReroute > (walk ? 20000 : 8000) && !(walk && toDest < 150)) reroute(f);
 
   let h;
-  if ((f.speed || 0) > 2.5 && f.heading != null && !isNaN(f.heading)) h = f.heading;
+  if (walk && compass != null && !f.sim) h = compass;
+  else if ((f.speed || 0) > 2.5 && f.heading != null && !isNaN(f.heading)) h = f.heading;
   else if (on) h = s.bearing;
   else h = lastHeading;
   lastHeading = smoothAngle(lastHeading, h, f.sim ? 0.35 : 0.7);
@@ -670,7 +742,10 @@ function navUpdate(f) {
   const remain = Math.max(0, R.total - along);
 
   // arrival
-  if ((on && remain < 25) || hav([f.lon, f.lat], dest.ll) < 25) { arrive(pos); return; }
+  if (walk) {
+    if (toDest < 8 || (on && remain < 4)) { arrive(pos); return; }
+    updateFinder(f, toDest, remain < 150 || toDest < 120);
+  } else if ((on && remain < 25) || toDest < 25) { arrive(pos); return; }
 
   // next maneuver
   let k = R.steps.length - 1;
@@ -694,8 +769,8 @@ function navUpdate(f) {
   $('spVal').textContent = Math.round((f.speed || 0) * 2.237);
 
   // voice
-  const sp = Math.max(f.speed || 0, 9);
-  const far = Math.max(400, sp * 35), near = Math.max(90, sp * 9);
+  const sp = Math.max(f.speed || 0, walk ? 1.4 : 9);
+  const far = walk ? 60 : Math.max(400, sp * 35), near = walk ? 15 : Math.max(90, sp * 9);
   renderLanes(k, dTurn, far, near);
   renderTurnArrow(k, dTurn, far);
   const a = announced[k] || (announced[k] = {});
@@ -713,9 +788,24 @@ function navUpdate(f) {
 
   // camera
   if (following) {
-    map.easeTo({ center: pos, bearing: lastHeading, pitch: 62, zoom: speedZoom(f.speed),
+    map.easeTo({ center: pos, bearing: lastHeading, pitch: walk ? 50 : 62, zoom: walk ? 18.6 : speedZoom(f.speed),
       duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * 0.2] });
   }
+}
+let finderAnnounced = false;
+function updateFinder(f, toDest, show) {
+  const box = $('finder');
+  if (!show) { box.classList.add('hidden'); return; }
+  if (box.classList.contains('hidden')) {
+    box.classList.remove('hidden');
+    if (!finderAnnounced) { finderAnnounced = true; say((dest.name || 'Your destination') + ' is ' + spokenDist(toDest) + ' away. Follow the arrow.'); }
+  }
+  const brg = bearing([f.lon, f.lat], dest.ll);
+  const head = compass != null && !f.sim ? compass : lastHeading;
+  $('fArrow').style.transform = 'rotate(' + Math.round(((brg - head) + 360) % 360) + 'deg)';
+  const d = fmtDist(toDest);
+  $('fDist').textContent = d.v + ' ' + d.u;
+  $('fName').textContent = dest.name || '';
 }
 async function reroute(f) {
   rerouting = true; lastReroute = Date.now();
@@ -727,6 +817,8 @@ async function reroute(f) {
 function arrive(pos) {
   arrived = true;
   stopSim();
+  $('finder').classList.add('hidden');
+  if (travel === 'drive' && dest) $('walkOn').classList.remove('hidden');
   carMarker.setLngLat(pos);
   $('bIcon').innerHTML = arrowSVG(null);
   $('bDist').innerHTML = 'Arrived';
@@ -748,8 +840,8 @@ function startSim() {
     if (!R) return stopSim();
     const st = R.steps[stepAt(d)];
     let v = st && st.duration > 0 ? st.distance / st.duration : 13;
-    v = Math.min(Math.max(v, 7), 31);
-    d += v * 0.25 * 1.5;
+    v = travel === 'walk' ? 1.4 : Math.min(Math.max(v, 7), 31);
+    d += v * 0.25 * (travel === 'walk' ? 4 : 1.5);
     const p = pointAt(d);
     navUpdate({ lon: p.pt[0], lat: p.pt[1], speed: v, heading: p.bearing, acc: 5, sim: true });
   }, 250);
