@@ -136,6 +136,8 @@
     background:#fff;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;
     box-shadow:0 6px 20px rgba(0,0,0,.5);font-size:11px;font-weight:700}
   #spVal{font-size:24px;font-weight:800;line-height:1}
+  #autoZoom{position:fixed;right:14px;bottom:calc(var(--sb) + 156px);z-index:5;background:var(--panel);padding:10px 15px;
+    border-radius:30px;font-weight:700;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#cfd8ea}
   #recenter{position:fixed;right:14px;bottom:calc(var(--sb) + 104px);z-index:5;background:var(--panel);padding:13px 18px;
     border-radius:30px;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#7cb6ff}
   .modefab{bottom:calc(var(--sb) + 92px)!important;flex-direction:column;display:flex!important;align-items:center;justify-content:center;font-size:21px;line-height:1}
@@ -205,6 +207,7 @@
 <div id="limit" class="hidden"><span>SPEED</span><span>LIMIT</span><b id="limVal"></b></div>
 <div id="speed" class="hidden"><div id="spVal">0</div><div>MPH</div></div>
 <button id="recenter" class="hidden">⦿ Re-center</button>
+<button id="autoZoom" class="hidden">🔍 Auto zoom</button>
 <button id="themeFab" class="fab modefab themefab" aria-label="Day or night"><span id="themeIco">🌓</span><small id="themeTxt">Auto</small></button>
 <button id="modeFab" class="fab modefab" aria-label="Car or walking"><span id="modeIco">🚗</span><small id="modeTxt">Car</small></button>
 <button id="locBtn" class="fab" aria-label="My location">
@@ -1437,6 +1440,8 @@ function setMode(m) {
   $('speed').classList.toggle('hidden', m !== 'nav');
   $('locBtn').classList.toggle('hidden', m !== 'search');
   $('recenter').classList.add('hidden');
+  const cp = camPref[travel];
+  $('autoZoom').classList.toggle('hidden', !(m === 'nav' && (cp.z != null || cp.p != null)));
 }
 
 $('cancelBtn').onclick = () => endTrip();
@@ -1445,6 +1450,7 @@ function syncModeUI() {
   $('modeIco').textContent = w ? '🚶' : '🚗'; $('modeTxt').textContent = w ? 'Walk' : 'Car';
   $('modeNav').textContent = w ? '🚗' : '🚶';
   $('mDrive').classList.toggle('on', !w); $('mWalk').classList.toggle('on', w);
+  if (mode === 'nav') saveCam();
 }
 $('themeFab').onclick = () => {
   themeMode = themeMode === 'auto' ? 'day' : themeMode === 'day' ? 'night' : 'auto';
@@ -1507,14 +1513,19 @@ $('driveBtn').onclick = () => {
   const first = R.steps[0];
   lastHeading = first && first.maneuver ? first.maneuver.bearing_after || 0 : 0;
   const start = gps ? [gps.lon, gps.lat] : R.c[0];
-  map.jumpTo({ center: start, zoom: travel === 'walk' ? 18.6 : 17.3, pitch: travel === 'walk' ? 50 : 62, bearing: lastHeading });
+  const cp = camPref[travel];
+  map.jumpTo({ center: start, zoom: cp.z != null ? cp.z : (travel === 'walk' ? 18.6 : 17.3), pitch: cp.p != null ? cp.p : (travel === 'walk' ? 50 : 62), bearing: lastHeading });
   setTimeout(() => say('Starting route. ' + instr(R.steps[0]) + (R.steps[1] ? '. Then ' + instr(R.steps[1]) : '')), 300);
   if ($('simChk').checked) startSim();
   else if (gps) navUpdate(gps);
 };
 $('endBtn').onclick = () => endTrip();
 $('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; if (muted) try { speechSynthesis.cancel(); } catch (e) {} };
-$('recenter').onclick = () => { following = true; $('recenter').classList.add('hidden'); if (gps) navUpdate(gps); };
+$('recenter').onclick = () => { following = true; $('recenter').classList.add('hidden'); if (gps && !sim) navUpdate(gps); };
+$('autoZoom').onclick = () => {
+  camPref[travel] = { z: null, p: null }; saveCam();
+  toast('Auto zoom on — zooms with your speed and at junctions', 1800);
+};
 $('locBtn').onclick = () => {
   if (gps) map.flyTo({ center: [gps.lon, gps.lat], zoom: 16, pitch: 50, duration: 900 });
   else toast('No GPS yet — allow Location for this site in Safari.');
@@ -1660,14 +1671,26 @@ function navUpdate(f) {
   if (on) buildRouteData(along, false);
 
   // camera: closer and steeper near lane-critical junctions
-  if (following) {
+  if (following && !camGesture) {
     let z = walk ? 18.6 : speedZoom(f.speed), pitch = walk ? 50 : 62;
     if (g && !g.all && dTurn < (g.hw ? 700 : 220)) { z = Math.min(18.3, z + 0.6); pitch = 66; }
+    const pref = camPref[travel];
+    if (pref.z != null) z = pref.z;          // your zoom wins over auto zoom
+    if (pref.p != null) pitch = pref.p;      // and your tilt
     map.easeTo({ center: carPos, bearing: lastHeading, pitch, zoom: z,
       duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * 0.2] });
   }
 }
 let carOffS = null;
+/* Your own zoom/tilt: pinching or tilting keeps following and is remembered (separately for driving and walking) */
+let camGesture = false, touches = 0;
+const camPref = { drive: { z: null, p: null }, walk: { z: null, p: null } };
+try { Object.assign(camPref, JSON.parse(localStorage.getItem('rv_cam') || '{}')); } catch (e) {}
+function saveCam() {
+  try { localStorage.setItem('rv_cam', JSON.stringify(camPref)); } catch (e) {}
+  const custom = camPref[travel].z != null || camPref[travel].p != null;
+  $('autoZoom').classList.toggle('hidden', !(mode === 'nav' && custom));
+}
 let finderAnnounced = false;
 function updateFinder(f, toDest, show) {
   const box = $('finder');
@@ -1789,8 +1812,24 @@ function init() {
     applyTheme(); syncThemeUI();
     const L = $('loading'); L.style.opacity = 0; setTimeout(() => L.remove(), 450);
   });
-  const userMove = e => { if (e.originalEvent && mode === 'nav') { following = false; $('recenter').classList.remove('hidden'); } };
-  map.on('dragstart', userMove); map.on('zoomstart', userMove); map.on('rotatestart', userMove); map.on('pitchstart', userMove);
+  // one-finger drag = look around (stop following); pinch / tilt = set your zoom and keep following
+  const box = map.getContainer();
+  box.addEventListener('touchstart', e => { touches = e.touches.length; }, { passive: true });
+  box.addEventListener('touchend', e => { touches = e.touches.length; }, { passive: true });
+  map.on('dragstart', e => {
+    if (!e.originalEvent || mode !== 'nav' || touches >= 2) return;
+    following = false; $('recenter').classList.remove('hidden');
+  });
+  const gStart = e => { if (e.originalEvent && mode === 'nav') camGesture = true; };
+  const gEnd = () => {
+    if (!camGesture) return;
+    camGesture = false;
+    camPref[travel].z = Math.round(map.getZoom() * 100) / 100;
+    camPref[travel].p = Math.round(map.getPitch());
+    saveCam();
+  };
+  map.on('zoomstart', gStart); map.on('pitchstart', gStart); map.on('rotatestart', gStart);
+  map.on('zoomend', gEnd); map.on('pitchend', gEnd); map.on('rotateend', gEnd);
 
   setMode('search');
   startGPS();
