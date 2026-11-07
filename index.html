@@ -59,6 +59,23 @@
   #pvTime{font-size:28px;font-weight:700;color:#4ade80}
   #pvDist{font-size:17px;color:var(--sub)}
   .pv-eta{font-size:14px;color:var(--sub);margin-top:2px}
+  #pvStops{margin-top:12px;max-height:28vh;overflow-y:auto}
+  #pvStops:empty{display:none}
+  .stoprow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+  .stoprow .sn{flex:none;width:26px;height:26px;border-radius:50%;background:#f59e0b;color:#111;font-weight:800;font-size:13px;display:grid;place-items:center}
+  .stoprow.dest .sn{background:none;font-size:16px}
+  .stoprow .sm{flex:1;min-width:0}
+  .stoprow .st{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stoprow .sa{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stoprow .sx{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);color:var(--sub);font-size:14px}
+  .addstop{margin-top:10px;width:100%;height:42px;border-radius:12px;background:rgba(245,158,11,.14);color:#fbbf24;font-weight:800;font-size:15px}
+  .cancelstop{display:none;height:36px;padding:0 12px;border-radius:10px;background:rgba(255,255,255,.08);font-weight:700;font-size:14px;color:#fbbf24}
+  body.addingstop .cancelstop{display:block}
+  body.addingstop #searchPanel{z-index:8}
+  body.addingstop .searchbox{box-shadow:0 0 0 2px #f59e0b,0 8px 30px rgba(0,0,0,.45)}
+  .stoppin{width:28px;height:28px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:#f59e0b;border:2.5px solid #fff;color:#111;
+    font-weight:900;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.45)}
+  .stoppin{line-height:1}
   .row{display:flex;gap:10px;margin-top:16px}
   .btn{height:54px;border-radius:14px;font-size:18px;font-weight:700;flex:1}
   .btn.go{background:var(--blue);color:#fff;flex:2}
@@ -134,6 +151,10 @@
   .nb-eta{font-size:24px;font-weight:800;color:#4ade80}
   .nb-sub{font-size:15px;color:var(--sub);margin-top:2px;font-weight:600}
   .nb-eta small{font-size:13px;font-weight:700;color:var(--sub);margin-left:2px}
+  .nb-eta,.nb-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #navBar{gap:7px!important;padding-left:14px!important;padding-right:10px!important}
+  #navBar .roundbtn{width:44px;height:44px;font-size:19px;flex:none}
+  #navBar .btn.end{width:68px;height:46px;font-size:17px}
   .roundbtn{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.08);font-size:22px;display:grid;place-items:center}
 
   #speed{position:fixed;left:14px;bottom:calc(var(--sb) + 100px);z-index:5;width:66px;height:66px;border-radius:50%;
@@ -185,6 +206,7 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
     <input id="q" type="search" placeholder="Where to?" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
     <button id="clearQ" class="hidden" aria-label="Clear">×</button>
+    <button id="cancelStop" class="cancelstop">Cancel</button>
   </div>
   <div id="results"></div>
 </div>
@@ -194,6 +216,8 @@
   <div class="pv-addr" id="pvAddr"></div>
   <div class="pv-stats"><span id="pvTime">–</span><span id="pvDist"></span></div>
   <div class="pv-eta" id="pvEta"></div>
+  <div id="pvStops"></div>
+  <button id="addStopBtn" class="addstop">＋ Add stop</button>
   <div class="modes"><button id="mDrive" class="on">🚗 Drive</button><button id="mWalk">🚶 Walk</button></div>
   <div class="row">
     <button id="cancelBtn" class="btn ghost">Cancel</button>
@@ -215,6 +239,7 @@
 
 <div id="navBar" class="hidden">
   <div class="nb-left"><div id="nbEta" class="nb-eta"></div><div id="nbSub" class="nb-sub"></div></div>
+  <button id="stopNav" class="roundbtn" aria-label="Add a stop">＋</button>
   <button id="modeNav" class="roundbtn" aria-label="Switch car or walking">🚶</button>
   <button id="muteBtn" class="roundbtn" aria-label="Voice">🔊</button>
   <button id="endBtn" class="btn end">End</button>
@@ -758,7 +783,10 @@ function instr(step) {
   const toward = step.destinations ? ' toward ' + step.destinations.split(',')[0].replace(/^[^:]*:\s*/, '') : '';
   switch (t) {
     case 'depart': return 'Head ' + compassWord(m.bearing_after) + (name ? ' on ' + name : '');
-    case 'arrive': return 'Arrive at your destination' + (mod && mod !== 'straight' ? ', on the ' + side(mod) : '');
+    case 'arrive': {
+      const stp = step._leg != null && step._leg < step._legs - 1 && R && R.targets ? R.targets[step._leg] : null;
+      return (stp ? 'Arrive at stop: ' + stp.name : 'Arrive at your destination') + (mod && mod !== 'straight' ? ', on the ' + side(mod) : '');
+    }
     case 'merge': return 'Merge ' + side(mod) + onto;
     case 'on ramp': return 'Take the ramp' + (mod && mod !== 'straight' ? ' on the ' + side(mod) : '') + (toward || onto);
     case 'off ramp': return 'Take exit' + (step.exits ? ' ' + step.exits.split(';')[0] : '') + (mod && mod !== 'straight' ? ' on the ' + side(mod) : '') + (toward || onto);
@@ -953,12 +981,15 @@ document.addEventListener('touchstart', e => {
 }, { passive: true });
 
 /* ---------- Routing (OSRM) ---------- */
+// Every point the route must pass, in order: stops you haven't reached yet, then the destination
+function routeTargets() { return stops.filter(x => !x.reached).concat(dest ? [dest] : []); }
 async function getRoute(from, to, heading) {
-  const pts = `${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=true`;
+  const targets = Array.isArray(to) && Array.isArray(to[0]) ? to : [to];
+  const pts = [from].concat(targets).map(p => `${p[0]},${p[1]}`).join(';') + '?overview=full&geometries=geojson&steps=true';
   let url = travel === 'walk'
     ? `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${pts}`
     : `https://router.project-osrm.org/route/v1/driving/${pts}`;
-  if (travel === 'drive' && heading != null && !isNaN(heading)) url += `&bearings=${Math.round(heading) % 360},60;`;
+  if (travel === 'drive' && heading != null && !isNaN(heading)) url += `&bearings=${Math.round(heading) % 360},60` + ';'.repeat(targets.length);
   let j;
   try { const r = await fetch(url); j = await r.json(); if (j.code !== 'Ok') throw 0; }
   catch (e) {
@@ -974,9 +1005,13 @@ function prepare(rt) {
   const c0 = rt.geometry.coordinates;
   const cum0 = [0];
   for (let i = 1; i < c0.length; i++) cum0.push(cum0[i - 1] + hav(c0[i - 1], c0[i]));
-  const steps = rt.legs[0].steps, starts = [];
+  const steps = [], starts = [];
+  rt.legs.forEach((leg, li) => leg.steps.forEach(st => { st._leg = li; st._legs = rt.legs.length; steps.push(st); }));
   let idx = 0;
-  for (const s of steps) { starts.push(cum0[Math.min(idx, c0.length - 1)]); idx += Math.max(0, s.geometry.coordinates.length - 1); }
+  for (const s of steps) {
+    starts.push(cum0[Math.min(idx, c0.length - 1)]);
+    if (s.maneuver.type !== 'arrive') idx += Math.max(0, s.geometry.coordinates.length - 1);   // an arrive step adds no road
+  }
   // densify to ≤20 m so the lane ribbon can shift smoothly
   const c = [c0[0]], cum = [0];
   for (let i = 1; i < c0.length; i++) {
@@ -1034,7 +1069,9 @@ function routeFC(i0, pos) {
 }
 function setRoute(rt) {
   R = prepare(rt);
+  R.targets = routeTargets();
   computeOffsets();
+  placeStopPins();
   R.seg = new Array(R.c.length - 1).fill(null);
   LD.fetchedTo = 0; LD.failAt = 0; LD.ver++;
   if (travel === 'drive' && LD.ways.size) matchRange(0, R.c.length - 1);
@@ -1365,7 +1402,7 @@ function reasonText(k, dTurn) {
   const st = R.steps[k];
   if (!st) return '';
   const m = st.maneuver, d = fmtDist(dTurn), dd = d.v + ' ' + d.u, sd = turnSide(k);
-  if (m.type === 'arrive') return 'destination in ' + dd;
+  if (m.type === 'arrive') return (st._leg < st._legs - 1 ? 'stop' : 'destination') + ' in ' + dd;
   if (m.type === 'off ramp') return (st.exits ? 'exit ' + st.exits.split(';')[0] : 'exit') + ' in ' + dd;
   if (m.type === 'fork') return 'keep ' + (sd || 'ahead') + ' in ' + dd;
   if (m.type === 'roundabout' || m.type === 'rotary') return 'roundabout in ' + dd;
@@ -1763,6 +1800,8 @@ setInterval(applyTheme, 5 * 60 * 1000);
 async function pickDest(place, fromLL) {
   $('q').blur();
   renderResults(null);
+  if (addingStop) return addStop(place);
+  if (mode === 'search') stops = [];         // a fresh trip starts with no stops
   dest = place;
   const from = fromLL || (gps ? [gps.lon, gps.lat] : null);
   if (!from) { toast('Waiting for your GPS location… (allow Location for this site)'); return; }
@@ -1773,12 +1812,13 @@ async function pickDest(place, fromLL) {
   $('driveBtn').textContent = travel === 'walk' ? 'Walk' : 'Drive';
   $('mDrive').classList.toggle('on', travel === 'drive'); $('mWalk').classList.toggle('on', travel === 'walk');
   destMarker.setLngLat(place.ll).addTo(map);
+  renderStops();
   try {
-    const rt = await getRoute(from, place.ll);
+    const rt = await getRoute(from, routeTargets().map(t => t.ll));
     setRoute(rt);
-    $('pvTime').textContent = fmtDur(rt.duration);
+    $('pvTime').textContent = fmtDur(rt.duration) + (stops.length ? '' : '');
     const d = fmtDist(rt.distance); $('pvDist').textContent = d.v + ' ' + d.u;
-    $('pvEta').textContent = 'Arrive around ' + clock(rt.duration) + (travel === 'walk' ? ' · walking' : '');
+    $('pvEta').textContent = 'Arrive around ' + clock(rt.duration) + (stops.length ? ` · ${stops.length} stop${stops.length > 1 ? 's' : ''}` : '') + (travel === 'walk' ? ' · walking' : '');
     $('driveBtn').disabled = false;
     const b = new maplibregl.LngLatBounds();
     rt.geometry.coordinates.forEach(p => b.extend(p));
@@ -1788,6 +1828,95 @@ async function pickDest(place, fromLL) {
     $('pvEta').textContent = 'Try a different destination.';
   }
 }
+
+/* ---------- Stops along the way ---------- */
+let stops = [], addingStop = false, stopPins = [];
+function stopPinEl(n) {
+  const el = document.createElement('div');
+  el.className = 'stoppin'; el.innerHTML = `<span style="transform:rotate(45deg)">${n}</span>`;
+  return el;
+}
+function placeStopPins() {
+  stopPins.forEach(m => m.remove()); stopPins = [];
+  if (!map || !window.maplibregl) return;
+  stops.forEach((st, i) => { if (!st.reached) stopPins.push(new maplibregl.Marker({ element: stopPinEl(i + 1), anchor: 'bottom' }).setLngLat(st.ll).addTo(map)); });
+}
+function renderStops() {
+  const box = $('pvStops');
+  if (!stops.length) { box.innerHTML = ''; return; }
+  box.innerHTML = stops.map((st, i) => `<div class="stoprow"><span class="sn">${i + 1}</span><div class="sm"><div class="st">${esc(st.name)}</div><div class="sa">${esc(st.addr || '')}</div></div>${mode === 'preview' ? `<button class="sx" data-i="${i}" aria-label="Remove stop">✕</button>` : ''}</div>`).join('') +
+    `<div class="stoprow dest"><span class="sn">🏁</span><div class="sm"><div class="st">${esc(dest ? dest.name : '')}</div></div></div>`;
+  box.querySelectorAll('.sx').forEach(b => b.onclick = () => { stops.splice(+b.dataset.i, 1); pickDest(dest); });
+}
+function startAddStop() {
+  addingStop = mode === 'nav' ? 'nav' : 'preview';
+  document.body.classList.add('addingstop');
+  $('searchPanel').classList.remove('hidden');
+  $('preview').classList.add('hidden');
+  $('q').value = ''; $('q').placeholder = 'Add a stop — try Gas or Coffee'; $('clearQ').classList.add('hidden');
+  renderHome();
+  $('q').focus();
+}
+function endAddStop() {
+  const was = addingStop;
+  addingStop = false;
+  document.body.classList.remove('addingstop');
+  $('q').placeholder = 'Where to?'; $('q').value = ''; renderResults(null);
+  if (mode !== 'search') $('searchPanel').classList.add('hidden');
+  if (was === 'preview') $('preview').classList.remove('hidden');
+}
+async function addStop(place) {
+  const was = addingStop;
+  endAddStop();
+  if (was === 'nav') {
+    // mid-trip: this becomes your next stop; re-plan from where you are now
+    stops.splice(stops.findIndex(x => !x.reached) < 0 ? stops.length : stops.findIndex(x => !x.reached), 0, place);
+    const ll = carMarker && carMarker._map ? carMarker.getLngLat() : null;
+    const from = ll ? [ll.lng, ll.lat] : gps ? [gps.lon, gps.lat] : null;
+    if (!from) return;
+    status('Adding stop…');
+    try {
+      const wasSim = !!sim; stopSim();
+      setRoute(await getRoute(from, routeTargets().map(t => t.ll), lastHeading));
+      say('Stop added: ' + place.name);
+      if (wasSim || $('simChk').checked) startSim(); else if (gps) navUpdate(gps);
+    } catch (e) { stops = stops.filter(x => x !== place); placeStopPins(); toast('Couldn’t route to that stop'); }
+    finally { status(null); }
+  } else {
+    stops.push(place);
+    pickDest(dest);
+  }
+}
+function checkStopsReached(along, f) {
+  if (!R || !R.targets) return;
+  for (let k = 1; k < R.steps.length; k++) {
+    const st = R.steps[k];
+    if (st.maneuver.type !== 'arrive' || st._leg >= st._legs - 1) continue;
+    const target = R.targets[st._leg];
+    if (!target || target.reached) continue;
+    if (along >= R.starts[k] - 30 || hav([f.lon, f.lat], target.ll) < 35) {
+      target.reached = true;
+      placeStopPins();
+      const next = routeTargets()[0];
+      say('You\u2019ve reached your stop, ' + target.name + '. ' + (next ? 'Continuing to ' + next.name + '.' : ''));
+      toast('📍 Reached stop: ' + target.name, 3500);
+    }
+  }
+}
+function nextStopInfo(along) {
+  if (!R || !R.targets) return null;
+  for (let k = 1; k < R.steps.length; k++) {
+    const st = R.steps[k];
+    if (st.maneuver.type !== 'arrive' || st._leg >= st._legs - 1) continue;
+    const target = R.targets[st._leg];
+    if (!target || target.reached || R.starts[k] < along - 30) continue;
+    return { name: target.name, t: R.duration * Math.max(0, R.starts[k] - along) / (R.total || 1) };
+  }
+  return null;
+}
+$('addStopBtn').onclick = () => startAddStop();
+$('stopNav').onclick = () => startAddStop();
+$('cancelStop').onclick = () => endAddStop();
 
 function setMode(m) {
   mode = m;
@@ -1841,7 +1970,7 @@ $('modeNav').onclick = async () => {
   if (!from) return;
   rerouting = true; status(travel === 'walk' ? 'Switching to walking…' : 'Switching to driving…');
   try {
-    setRoute(await getRoute(from, dest.ll));
+    setRoute(await getRoute(from, routeTargets().map(t => t.ll)));
     arrived = false; offCount = 0; finderAnnounced = false; following = true;
     say((travel === 'walk' ? 'Walking directions. ' : 'Driving directions. ') + instr(R.steps[0]));
     if (wasSim || $('simChk').checked) startSim(); else if (gps) navUpdate(gps);
@@ -1928,6 +2057,7 @@ function hideLaneUI() {
 function endTrip() {
   stopSim();
   R = null; dest = null; arrived = false;
+  stops = []; addingStop = false; placeStopPins(); renderStops();
   walkLook(false); syncModeUI();
   $('finder').classList.add('hidden'); $('walkOn').classList.add('hidden');
   const empty = { type: 'FeatureCollection', features: [] };
@@ -1958,6 +2088,7 @@ function navUpdate(f) {
   const on = s.d < tol;
   offCount = on ? 0 : offCount + 1;
   const toDest = hav([f.lon, f.lat], dest.ll);
+  checkStopsReached(on ? s.along : lastAlong, f);
   if (offCount >= (walk ? 6 : 3) && !rerouting && !sim && Date.now() - lastReroute > (walk ? 20000 : 8000) && !(walk && toDest < 150)) reroute(f);
 
   let h;
@@ -1996,7 +2127,8 @@ function navUpdate(f) {
   const tLeft = R.duration * (remain / (R.total || 1));
   $('nbEta').innerHTML = clock(tLeft) + '<small> arrival</small>';
   const rd = fmtDist(remain);
-  $('nbSub').textContent = fmtDur(tLeft) + ' · ' + rd.v + ' ' + rd.u;
+  const ns = nextStopInfo(along);
+  $('nbSub').textContent = ns ? `Stop: ${ns.name} · ${clock(ns.t)}` : fmtDur(tLeft) + ' · ' + rd.v + ' ' + rd.u;
   $('spVal').textContent = Math.round((f.speed || 0) * 2.237);
 
   if (setScale(f.lat)) { applyScale(); lastBuild.ver = null; }
@@ -2116,7 +2248,7 @@ function updateFinder(f, toDest, show) {
 async function reroute(f) {
   rerouting = true; lastReroute = Date.now();
   status('Rerouting…'); say('Rerouting');
-  try { setRoute(await getRoute([f.lon, f.lat], dest.ll, f.heading)); offCount = 0; }
+  try { setRoute(await getRoute([f.lon, f.lat], routeTargets().map(t => t.ll), f.heading)); offCount = 0; }
   catch (e) { toast('Could not reroute — will try again'); }
   finally { rerouting = false; status(null); }
 }
