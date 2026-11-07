@@ -143,6 +143,45 @@
   #limit.over{box-shadow:0 0 0 3px #e5484d,0 0 18px rgba(229,72,77,.8)}
   body.walk #limit{display:none!important}
   body.laneunk .car{opacity:.82}
+  /* ===== premium glass panels (v3) ===== */
+  #banner{left:10px;right:10px;border-radius:22px;background:rgba(12,18,30,.84);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+    border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 40px rgba(0,0,0,.45)}
+  #banner .b-main{background:none!important;padding:12px 14px 10px;gap:12px}
+  #banner .b-icon{width:54px;height:54px;border-radius:16px;background:linear-gradient(160deg,#1fbf7d,#0f8a57);padding:7px;box-shadow:0 6px 16px rgba(16,160,100,.35)}
+  #banner.close .b-icon{background:linear-gradient(160deg,#36d892,#14a86a);animation:iconPulse 1.1s ease-in-out infinite}
+  @keyframes iconPulse{50%{box-shadow:0 0 0 6px rgba(54,216,146,.18),0 6px 16px rgba(16,160,100,.35)}}
+  #banner .b-dist{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  #banner .b-dist small{font-size:16px;color:#9fb0cc}
+  #banner .b-instr{font-size:16.5px;font-weight:650;color:#e9eef8;margin-top:3px}
+  #banner .b-then{background:rgba(255,255,255,.05);font-size:13.5px;padding:6px 14px}
+  #banner #lanes{background:rgba(255,255,255,.04);padding:7px 10px;border-top:1px solid rgba(255,255,255,.06)}
+  #banner .lane{background:rgba(255,255,255,.06);height:44px}
+  #banner .lane.ok{background:rgba(47,140,255,.28);border-color:rgba(124,192,255,.7)}
+  #banner #lanes.now .lane.ok{background:#2f8cff}
+  #banner #laneInfo{background:rgba(255,255,255,.04);padding:0 12px 8px}
+  #banner #laneTip{font-size:14.5px}
+  #banner #laneSrc{color:#8fa3c2;font-size:11px}
+  #banner #bSign{background:none;padding:2px 10px 10px}
+  #banner .xsign{min-width:58%;padding:6px 14px 5px}
+  #banner .xdest{font-size:15px}
+  #navBar{flex-direction:column;align-items:stretch!important;gap:8px!important;padding:10px 12px calc(var(--sb) + 10px)!important;
+    background:rgba(12,18,30,.86)!important;backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+    border-top:1px solid rgba(255,255,255,.08);border-radius:24px 24px 0 0}
+  #navBar .nb-top{display:flex;align-items:center;gap:10px}
+  #navBar #speed{position:static;width:50px;height:50px;flex:none;box-shadow:none;font-size:9px;border:2.5px solid #e6e9ef}
+  #navBar #speed #spVal{font-size:20px}
+  #navBar #limit{position:static;width:42px;flex:none;box-shadow:0 0 0 1.5px #fff;font-size:7px;padding:3px 0 2px;border-width:2px;border-radius:6px}
+  #navBar #limit b{font-size:19px}
+  #navBar #limit.over{box-shadow:0 0 0 2.5px #e5484d,0 0 14px rgba(229,72,77,.8)}
+  #navBar .nb-eta{font-size:22px;letter-spacing:-.3px}
+  #navBar .btn.end{width:72px;height:46px;border-radius:14px;flex:none}
+  #navBar .nb-actions{display:flex;gap:8px}
+  .chipbtn{flex:1;height:38px;border-radius:12px;background:rgba(255,255,255,.07);font-size:13.5px;font-weight:700;color:#dbe3f1;border:1px solid rgba(255,255,255,.06)}
+  .chipbtn:active{background:rgba(47,140,255,.3)}
+  #roadPill{bottom:calc(var(--sb) + 134px)!important}
+  #recenter{bottom:calc(var(--sb) + 146px)!important}
+  #autoZoom{bottom:calc(var(--sb) + 196px)!important}
+  body.walk #navBar #speed, body.walk #navBar #limit{display:none!important}
   @keyframes lanePulse{50%{transform:scale(1.08);box-shadow:0 0 14px rgba(120,190,255,.9)}}
 
   #navBar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);display:flex;align-items:center;gap:10px;
@@ -238,15 +277,20 @@
 </div>
 
 <div id="navBar" class="hidden">
-  <div class="nb-left"><div id="nbEta" class="nb-eta"></div><div id="nbSub" class="nb-sub"></div></div>
-  <button id="stopNav" class="roundbtn" aria-label="Add a stop">＋</button>
-  <button id="modeNav" class="roundbtn" aria-label="Switch car or walking">🚶</button>
-  <button id="muteBtn" class="roundbtn" aria-label="Voice">🔊</button>
-  <button id="endBtn" class="btn end">End</button>
+  <div class="nb-top">
+    <div id="speed" class="hidden"><div id="spVal">0</div><div>MPH</div></div>
+    <div id="limit" class="hidden"><span>SPEED</span><span>LIMIT</span><b id="limVal"></b></div>
+    <div class="nb-left"><div id="nbEta" class="nb-eta"></div><div id="nbSub" class="nb-sub"></div></div>
+    <button id="endBtn" class="btn end">End</button>
+  </div>
+  <div class="nb-actions">
+    <button id="stopNav" class="chipbtn" aria-label="Add a stop">＋ Stop</button>
+    <button id="modeNav" class="chipbtn" aria-label="Switch car or walking">🚶 Walk</button>
+    <button id="muteBtn" class="chipbtn" aria-label="Voice">🔊 Voice</button>
+  </div>
 </div>
 
-<div id="limit" class="hidden"><span>SPEED</span><span>LIMIT</span><b id="limVal"></b></div>
-<div id="speed" class="hidden"><div id="spVal">0</div><div>MPH</div></div>
+
 <button id="recenter" class="hidden">⦿ Re-center</button>
 <button id="viewBtn" class="viewbtn hidden" aria-label="Change view"></button>
 <div id="roadPill" class="hidden"></div>
@@ -1073,6 +1117,7 @@ function setRoute(rt) {
   computeOffsets();
   placeStopPins();
   R.seg = new Array(R.c.length - 1).fill(null);
+  R.segWay = new Array(R.c.length - 1).fill(null);
   LD.fetchedTo = 0; LD.failAt = 0; LD.ver++;
   if (travel === 'drive' && LD.ways.size) matchRange(0, R.c.length - 1);
   computeGuidance();
@@ -1080,6 +1125,8 @@ function setRoute(rt) {
   lastSnapSeg = 0; lastAlong = 0; announced = {}; laneKey = ''; turnKey = ''; arrowKey = ''; signKey = '';
   if (map.getSource('arrows')) map.getSource('arrows').setData({ type: 'FeatureCollection', features: [] });
   if (setScale(R.c[0][1])) applyScale();
+  computeElevation();
+  W3.built.along = -1e9; set2DRange(W3.ok && travel === 'drive');
   buildRouteData(0, true);
   loadLaneData(0);
 }
@@ -1180,6 +1227,9 @@ function laneInfo(w, fwd) {
   const wTag = parseFloat(t.width), allLanes = parseInt(t.lanes, 10);
   if (wTag > 2 && allLanes > 0) info.lw = Math.max(2.7, Math.min(4.0, wTag / allLanes));
   info.lw = Math.round(info.lw * 100) / 100;
+  info.bridge = !!t.bridge && t.bridge !== 'no';
+  info.tunnel = !!t.tunnel && t.tunnel !== 'no';
+  info.layer = parseInt(t.layer, 10) || 0;
   LD.info.set(key, info);
   return info;
 }
@@ -1211,6 +1261,7 @@ function matchRange(i0, i1) {
       }
     }
     R.seg[i] = best ? laneInfo(best.w, best.fwd) : null;
+    if (R.segWay) R.segWay[i] = best ? best.w.id : null;
   }
 }
 async function loadLaneData(fromD) {
@@ -1222,8 +1273,9 @@ async function loadLaneData(fromD) {
   const pe = pointAt(end).pt; pts.push(pe[1].toFixed(5) + ',' + pe[0].toFixed(5));
   LD.loading = true;
   try {
-    const els = await overpass(`[out:json][timeout:25];way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street)$"](around:20,${pts.join(',')});out body geom;`, 28000);
-    els.forEach(addWay);
+    const P = pts.join(',');
+    const els = await overpass(`[out:json][timeout:25];(way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street)$"](around:20,${P});node[highway~"^(street_lamp|traffic_signals|stop)$"](around:30,${P});node[natural=tree](around:30,${P});way[natural=tree_row](around:30,${P});way[barrier~"^(guard_rail|jersey_barrier|wall)$"](around:25,${P}););out body geom;`, 28000);
+    els.forEach(e => (e.type === 'way' && e.tags && e.tags.highway) ? addWay(e) : addProp(e));
     if (R !== myR) return;
     matchRange(segAt(start), segAt(end) + 1);
     LD.fetchedTo = end;
@@ -1234,6 +1286,7 @@ async function loadLaneData(fromD) {
 function afterLaneData() {
   LD.ver++;
   computeGuidance();
+  computeElevation();
   laneKey = ''; arrowKey = ''; lastBuild.ver = null;
   if (mode !== 'nav' && R) buildRouteData(0, true);
 }
@@ -1600,6 +1653,7 @@ function buildRouteData(along, force) {
     feats.push({ type: 'Feature', properties: L.kind === 'b' ? { k: 'best', wm: L.lw } : { k: 'simple' }, geometry: { type: 'LineString', coordinates: L.pts } });
   }
   map.getSource('route').setData({ type: 'FeatureCollection', features: feats });
+  try { build3D(along, force); } catch (e) { console.warn('3D build failed', e); W3.buf = null; }
 }
 function emitLanes(p, out) {
   const si = R.seg[p.from], rec = R.rec && R.rec[p.from];
@@ -1787,6 +1841,7 @@ function applyTheme(force) {
   try { if (map.getLayer('rt-shoulder')) map.setPaintProperty('rt-shoulder', 'line-color', PALETTES[name].shoulder); } catch (e) {}
   themeNow = name;
   document.body.dataset.theme = name;
+  W3.night = name === 'night'; if (R && W3.gl) build3D(lastAlong, true);
   applyScale();
   if (travel === 'walk' && mode === 'nav') walkLook(true);
 }
@@ -1795,6 +1850,587 @@ function syncThemeUI() {
   $('themeTxt').textContent = themeMode === 'auto' ? 'Auto' : themeMode === 'day' ? 'Day' : 'Night';
 }
 setInterval(applyTheme, 5 * 60 * 1000);
+
+/* =====================================================================================================
+   3D ROAD WORLD — a lightweight WebGL layer inside the map. Every surface is built from real data:
+   the route's road geometry (OSRM / OpenStreetMap), real lane counts & widths, OSM bridge/layer tags,
+   OSM street lamps, signals, stop signs, trees and barriers, and real exit/destination data.
+   Local coordinates are metres east (x), north (y) and up (z) from an origin near the car.
+   ===================================================================================================== */
+const W3 = { ok: true, minZoom: 14.5, gl: null, origin: null, buf: null, built: { along: -1e9, key: '' },
+  props: { lamps: new Map(), signals: new Map(), stops: new Map(), trees: new Map(), barriers: new Map() }, car: null, signs: [], night: false };
+const M4 = {
+  mul(a, b) { const o = new Float64Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; },
+  ident() { const o = new Float64Array(16); o[0] = o[5] = o[10] = o[15] = 1; return o; },
+  translate(x, y, z) { const o = M4.ident(); o[12] = x; o[13] = y; o[14] = z; return o; },
+  scale(x, y, z) { const o = M4.ident(); o[0] = x; o[5] = y; o[10] = z; return o; },
+  rotZ(a) { const o = M4.ident(), c = Math.cos(a), s = Math.sin(a); o[0] = c; o[1] = s; o[4] = -s; o[5] = c; return o; }
+};
+
+/* ---------- geometry builder: interleaved [x y z  nx ny nz  r g b a  mat] ---------- */
+class GB {
+  constructor() { this.v = []; }
+  get count() { return this.v.length / 11; }
+  vert(p, n, c, m) { this.v.push(p[0], p[1], p[2], n[0], n[1], n[2], c[0], c[1], c[2], c[3] == null ? 1 : c[3], m || 0); }
+  tri(a, b, c, col, mat, n) {
+    if (!n) { const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+      n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]; const L = Math.hypot(n[0], n[1], n[2]) || 1; n = [n[0] / L, n[1] / L, n[2] / L]; }
+    this.vert(a, n, col, mat); this.vert(b, n, col, mat); this.vert(c, n, col, mat);
+  }
+  quad(a, b, c, d, col, mat, n) { this.tri(a, b, c, col, mat, n); this.tri(a, c, d, col, mat, n); }
+  // ribbon between two polylines (same length), facing up
+  ribbon(L, Rr, col, mat) { for (let i = 0; i < L.length - 1; i++) this.quad(L[i], Rr[i], Rr[i + 1], L[i + 1], col, mat, [0, 0, 1]); }
+  // vertical wall along a polyline from zTop(i) down to zBot(i); outward = side of travel
+  wall(P, zTop, zBot, col, mat, flip) {
+    for (let i = 0; i < P.length - 1; i++) {
+      const a = P[i], b = P[i + 1];
+      const A = [a[0], a[1], zTop(i)], B = [b[0], b[1], zTop(i + 1)], C = [b[0], b[1], zBot(i + 1)], D = [a[0], a[1], zBot(i)];
+      if (flip) this.quad(A, D, C, B, col, mat); else this.quad(A, B, C, D, col, mat);
+    }
+  }
+  box(cx, cy, cz, sx, sy, sz, yaw, col, mat) {   // cz = bottom
+    const c = Math.cos(yaw), s = Math.sin(yaw), hx = sx / 2, hy = sy / 2;
+    const P = (x, y, z) => [cx + x * c - y * s, cy + x * s + y * c, cz + z];
+    const p = [P(-hx, -hy, 0), P(hx, -hy, 0), P(hx, hy, 0), P(-hx, hy, 0), P(-hx, -hy, sz), P(hx, -hy, sz), P(hx, hy, sz), P(-hx, hy, sz)];
+    this.quad(p[4], p[5], p[6], p[7], col, mat); this.quad(p[0], p[1], p[5], p[4], col, mat); this.quad(p[1], p[2], p[6], p[5], col, mat);
+    this.quad(p[2], p[3], p[7], p[6], col, mat); this.quad(p[3], p[0], p[4], p[7], col, mat);
+  }
+  cyl(cx, cy, z0, z1, r, seg, col, mat) {
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      const A = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)], B = [cx + r * Math.cos(a1), cy + r * Math.sin(a1)];
+      this.quad([A[0], A[1], z0], [B[0], B[1], z0], [B[0], B[1], z1], [A[0], A[1], z1], col, mat);
+    }
+  }
+  blob(cx, cy, cz, rx, rz, col, mat) {   // low-poly rounded crown (octahedron, subdivided once)
+    const T = [[0, 0, 1], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]];
+    const F = [[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [5, 2, 1], [5, 3, 2], [5, 4, 3], [5, 1, 4]];
+    const nz = v => { const L = Math.hypot(v[0], v[1], v[2]); return [v[0] / L, v[1] / L, v[2] / L]; };
+    const mid = (a, b) => nz([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]);
+    const P = v => [cx + v[0] * rx, cy + v[1] * rx, cz + v[2] * rz];
+    for (const [i, j, k] of F) {
+      const a = T[i], b = T[j], c = T[k], ab = mid(a, b), bc = mid(b, c), ca = mid(c, a);
+      for (const [x, y, z] of [[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]]) this.tri(P(x), P(y), P(z), col, mat, nz([(x[0] + y[0] + z[0]), (x[1] + y[1] + z[1]), (x[2] + y[2] + z[2])]));
+    }
+  }
+  disc(cx, cy, z, r, seg, col, mat) { for (let i = 0; i < seg; i++) { const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2; this.tri([cx, cy, z], [cx + r * Math.cos(a0), cy + r * Math.sin(a0), z], [cx + r * Math.cos(a1), cy + r * Math.sin(a1), z], col, mat, [0, 0, 1]); } }
+}
+const hex = (h, a) => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255, a == null ? 1 : a]; };
+
+/* ---------- shaders ---------- */
+const VS = `attribute vec3 aPos; attribute vec3 aNrm; attribute vec4 aCol; attribute float aMat;
+uniform mat4 uMVP; uniform mat4 uModel;
+varying vec4 vCol; varying vec3 vN; varying vec3 vW; varying float vMat;
+void main(){ vec4 w = uModel * vec4(aPos, 1.0); vW = w.xyz; vN = normalize(mat3(uModel) * aNrm); vCol = aCol; vMat = aMat; gl_Position = uMVP * w; }`;
+const FS = `precision highp float;
+varying vec4 vCol; varying vec3 vN; varying vec3 vW; varying float vMat;
+uniform vec3 uSun; uniform float uAmb; uniform float uSunI;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+void main(){
+  vec3 n = normalize(vN);
+  float dif = max(dot(n, uSun), 0.0);
+  float sky = 0.6 + 0.4 * n.z;
+  vec3 c = vCol.rgb * (uAmb * sky + uSunI * dif);
+  if (vMat > 1.5 && vMat < 2.5) { float g = hash(floor(vW.xy * 5.0)); float g2 = hash(floor(vW.xy * 0.7)); c *= 0.93 + 0.09 * g + 0.04 * g2; }   // asphalt grain
+  if (vMat > 2.5) { c *= 0.97 + 0.06 * hash(floor(vW.xy * 9.0)); }                                                                     // concrete
+  if (vMat > 0.5 && vMat < 1.5) c = vCol.rgb;                                                                                         // emissive (lamps, signals, route)
+  gl_FragColor = vec4(c, vCol.a);
+}`;
+const VST = `attribute vec3 aPos; attribute vec2 aUV; uniform mat4 uMVP; varying vec2 vUV; void main(){ vUV = aUV; gl_Position = uMVP * vec4(aPos, 1.0); }`;
+const FST = `precision mediump float; varying vec2 vUV; uniform sampler2D uTex; uniform float uBright; void main(){ vec4 t = texture2D(uTex, vUV); gl_FragColor = vec4(t.rgb * uBright, t.a); }`;
+function glProgram(gl, vs, fs) {
+  const mk = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, vs)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+
+/* ---------- the map layer ---------- */
+const road3dLayer = {
+  id: 'road3d', type: 'custom', renderingMode: '3d',
+  onAdd(m, gl) {
+    try {
+      W3.gl = gl;
+      W3.prog = glProgram(gl, VS, FS);
+      W3.progT = glProgram(gl, VST, FST);
+      W3.loc = {}; for (const a of ['aPos', 'aNrm', 'aCol', 'aMat']) W3.loc[a] = gl.getAttribLocation(W3.prog, a);
+      for (const u of ['uMVP', 'uModel', 'uSun', 'uAmb', 'uSunI']) W3.loc[u] = gl.getUniformLocation(W3.prog, u);
+      W3.locT = { aPos: gl.getAttribLocation(W3.progT, 'aPos'), aUV: gl.getAttribLocation(W3.progT, 'aUV'), uMVP: gl.getUniformLocation(W3.progT, 'uMVP'), uTex: gl.getUniformLocation(W3.progT, 'uTex'), uBright: gl.getUniformLocation(W3.progT, 'uBright') };
+      W3.carBuf = upload(gl, buildCar());
+      const sh = new GB(); for (let i = 0; i < 20; i++) { const a0 = i / 20 * Math.PI * 2, a1 = (i + 1) / 20 * Math.PI * 2; sh.tri([0, 0, 0.05], [1.25 * Math.cos(a0), 2.7 * Math.sin(a0), 0.05], [1.25 * Math.cos(a1), 2.7 * Math.sin(a1), 0.05], [0, 0, 0, 0.32], 1, [0, 0, 1]); }
+      W3.carShadow = upload(gl, sh);
+    } catch (e) { console.warn('3D roads disabled:', e); W3.ok = false; set2DRange(false); }
+  },
+  render(gl, matrix) {
+    if (!W3.ok || !W3.buf || !W3.origin || map.getZoom() < W3.minZoom) return;
+    try { draw3D(gl, matrix); } catch (e) { console.warn('3D roads disabled:', e); W3.ok = false; set2DRange(false); }
+  }
+};
+function upload(gl, gb) {
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(gb.v), gl.STATIC_DRAW);
+  return { b, n: gb.count };
+}
+function bindLit(gl, buf) {
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf.b);
+  const L = W3.loc, S = 44;
+  gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, S, 0);
+  gl.enableVertexAttribArray(L.aNrm); gl.vertexAttribPointer(L.aNrm, 3, gl.FLOAT, false, S, 12);
+  gl.enableVertexAttribArray(L.aCol); gl.vertexAttribPointer(L.aCol, 4, gl.FLOAT, false, S, 24);
+  gl.enableVertexAttribArray(L.aMat); gl.vertexAttribPointer(L.aMat, 1, gl.FLOAT, false, S, 40);
+}
+function originMatrix() {
+  const mc = maplibregl.MercatorCoordinate.fromLngLat({ lng: W3.origin[0], lat: W3.origin[1] }, 0), s = mc.meterInScaleUnits();
+  return M4.mul(M4.translate(mc.x, mc.y, mc.z), M4.scale(s, -s, s));
+}
+function draw3D(gl, matrix) {
+  const MVP = new Float32Array(M4.mul(Float64Array.from(matrix), originMatrix()));
+  const night = W3.night;
+  gl.useProgram(W3.prog);
+  gl.uniformMatrix4fv(W3.loc.uMVP, false, MVP);
+  gl.uniformMatrix4fv(W3.loc.uModel, false, new Float32Array(M4.ident()));
+  const sun = [0.45, 0.55, 0.7], sl = Math.hypot(...sun);
+  gl.uniform3f(W3.loc.uSun, sun[0] / sl, sun[1] / sl, sun[2] / sl);
+  gl.uniform1f(W3.loc.uAmb, night ? 0.42 : 0.62); gl.uniform1f(W3.loc.uSunI, night ? 0.18 : 0.55);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
+  gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); gl.disable(gl.CULL_FACE);
+  // 1) solid world
+  bindLit(gl, W3.buf.solid); gl.drawArrays(gl.TRIANGLES, 0, W3.buf.solid.n);
+  // 2) car (own model matrix)
+  if (W3.car && W3.carBuf) {
+    const c = W3.car, p = toLocal(c.ll);
+    gl.uniformMatrix4fv(W3.loc.uModel, false, new Float32Array(M4.mul(M4.mul(M4.translate(p[0], p[1], c.z), M4.rotZ(-toRad(c.h))), M4.scale(1.5, 1.5, 1.5))));
+    bindLit(gl, W3.carBuf); gl.drawArrays(gl.TRIANGLES, 0, W3.carBuf.n);
+    gl.uniformMatrix4fv(W3.loc.uModel, false, new Float32Array(M4.ident()));
+  }
+  // 3) see-through: route glow, shadows (no depth write)
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+  if (W3.buf.trans.n) { bindLit(gl, W3.buf.trans); gl.drawArrays(gl.TRIANGLES, 0, W3.buf.trans.n); }
+  if (W3.car && W3.carShadow) {
+    const c = W3.car, p = toLocal(c.ll);
+    gl.uniformMatrix4fv(W3.loc.uModel, false, new Float32Array(M4.mul(M4.mul(M4.translate(p[0], p[1], c.z), M4.rotZ(-toRad(c.h))), M4.scale(1.5, 1.5, 1))));
+    bindLit(gl, W3.carShadow); gl.drawArrays(gl.TRIANGLES, 0, W3.carShadow.n);
+    gl.uniformMatrix4fv(W3.loc.uModel, false, new Float32Array(M4.ident()));
+  }
+  // 4) light pools under street lamps at night (additive)
+  if (night && W3.buf.glow.n) { gl.blendFunc(gl.SRC_ALPHA, gl.ONE); bindLit(gl, W3.buf.glow); gl.drawArrays(gl.TRIANGLES, 0, W3.buf.glow.n); }
+  gl.depthMask(true); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  for (const a of ['aPos', 'aNrm', 'aCol', 'aMat']) gl.disableVertexAttribArray(W3.loc[a]);
+  // 5) road signs (textured)
+  if (W3.signs.length) {
+    gl.useProgram(W3.progT); gl.uniformMatrix4fv(W3.locT.uMVP, false, MVP); gl.uniform1f(W3.locT.uBright, night ? 1.0 : 0.95);
+    for (const s of W3.signs) {
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, s.tex); gl.uniform1i(W3.locT.uTex, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, s.buf);
+      gl.enableVertexAttribArray(W3.locT.aPos); gl.vertexAttribPointer(W3.locT.aPos, 3, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(W3.locT.aUV); gl.vertexAttribPointer(W3.locT.aUV, 2, gl.FLOAT, false, 20, 12);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+    gl.disableVertexAttribArray(W3.locT.aPos); gl.disableVertexAttribArray(W3.locT.aUV);
+  }
+  gl.disable(gl.BLEND);
+}
+function toLocal(ll) { const o = W3.origin; return [(ll[0] - o[0]) * 111320 * Math.cos(toRad(o[1])), (ll[1] - o[1]) * 110540]; }
+// 2D lane overlays hand over to the 3D layer when zoomed in (smooth level of detail)
+const LAYERS_2D = ['rt-shoulder', 'rt-car', 'rt-lane', 'rt-best-casing', 'rt-best', 'rt-flow', 'rt-dash', 'rt-edgeR', 'rt-edgeY', 'rt-arrows', 'turn-casing', 'turn-line', 'turn-head'];
+function set2DRange(threeD) {
+  if (!map || !map.setLayerZoomRange) return;
+  for (const id of LAYERS_2D) { try { if (map.getLayer(id)) map.setLayerZoomRange(id, 0, threeD ? W3.minZoom : 24); } catch (e) {} }
+}
+
+/* ---------- simple car model (metres; forward = +y) ---------- */
+function buildCar() {
+  const g = new GB(), body = hex('#2f7cf6'), dark = hex('#0f1d33'), glass = hex('#1b2a44'), lightF = hex('#fff6d6'), lightR = hex('#ff3b3b');
+  g.box(0, 0, 0.25, 1.86, 4.5, 0.62, 0, body, 0);          // lower body
+  g.box(0, -0.25, 0.87, 1.6, 2.4, 0.5, 0, glass, 0);       // cabin / glass
+  g.box(0, -0.25, 1.37, 1.5, 2.1, 0.06, 0, body, 0);       // roof
+  for (const x of [-0.82, 0.82]) for (const y of [-1.45, 1.45]) g.cyl(x, y, 0.0, 0.34, 0.34, 8, dark, 0);   // wheels (stubby)
+  g.box(-0.6, 2.24, 0.5, 0.36, 0.06, 0.14, 0, lightF, 1); g.box(0.6, 2.24, 0.5, 0.36, 0.06, 0.14, 0, lightF, 1);
+  g.box(-0.62, -2.24, 0.52, 0.34, 0.06, 0.12, 0, lightR, 1); g.box(0.62, -2.24, 0.52, 0.34, 0.06, 0.12, 0, lightR, 1);
+  g.tri([0, 3.6, 0.04], [-0.7, 2.6, 0.04], [0.7, 2.6, 0.04], hex('#7cc0ff'), 1, [0, 0, 1]);   // direction chevron on the road
+  return g;
+}
+/* ---------- elevation from OSM bridge / layer tags (with real-world approach ramps, max ~5% grade) ---------- */
+function computeElevation() {
+  if (!R) return;
+  const N = R.c.length - 1, z = new Array(N).fill(0);
+  for (let i = 0; i < N; i++) {
+    const si = R.seg && R.seg[i];
+    if (!si) continue;
+    const lay = si.layer || 0;
+    if (si.bridge) z[i] = Math.max(1, lay) * 6.5;
+    else if (lay > 0) z[i] = lay * 6.5;
+  }
+  const len = i => R.cum[i + 1] - R.cum[i];
+  for (let i = N - 2; i >= 0; i--) z[i] = Math.max(z[i], z[i + 1] - 0.05 * len(i));   // ramp up before
+  for (let i = 1; i < N; i++) z[i] = Math.max(z[i], z[i - 1] - 0.05 * len(i));       // ramp down after
+  R.elev = z;
+}
+const segZ = i => (R.elev && R.elev[Math.max(0, Math.min(i, R.elev.length - 1))]) || 0;
+const vertZ = v => (segZ(v - 1) + segZ(v)) / 2;
+function elevAt(d) { return segZ(segAt(d)); }
+
+/* frame along route vertices: point + mitred right-normal, so any lateral offset (m) is one multiply */
+function frame(v0, v1) {
+  const F = [];
+  for (let v = v0; v <= v1; v++) {
+    const p = R.c[v], kx = 111320 * Math.cos(toRad(p[1])), ky = 110540;
+    const dir = (a, b) => { const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * ky, L = Math.hypot(dx, dy); return L > 1e-6 ? [dx / L, dy / L] : null; };
+    let d1 = v > v0 ? dir(R.c[v - 1], p) : null, d2 = v < v1 ? dir(p, R.c[v + 1]) : null;
+    d1 = d1 || d2; d2 = d2 || d1 || [0, 1];
+    let nx = d1[1] + d2[1], ny = -(d1[0] + d2[0]); const nl = Math.hypot(nx, ny);
+    if (nl < 1e-6) { nx = d2[1]; ny = -d2[0]; } else { nx /= nl; ny /= nl; }
+    const k = 1 / Math.max(0.6, nx * d2[1] - ny * d2[0]);
+    const q = toLocal(p);
+    F.push({ x: q[0], y: q[1], nx: nx * k, ny: ny * k, z: vertZ(v), v });
+  }
+  return F;
+}
+const at = (f, off, dz) => [f.x + f.nx * off, f.y + f.ny * off, f.z + (dz || 0)];
+
+/* ---------- build everything within ~0.8 km behind → 3 km ahead of the car ---------- */
+function build3D(along, force) {
+  if (!W3.ok || !W3.gl || !R || travel !== 'drive') { W3.buf = null; return; }
+  const key = LD.ver + '|' + (W3.night ? 'n' : 'd') + '|' + R.c.length;
+  if (!force && Math.abs(along - W3.built.along) < 150 && W3.built.key === key) return;
+  W3.built = { along, key };
+  const carLL = pointAt(along).pt;
+  W3.origin = carLL;
+  const day = !W3.night, N = R.c.length - 1;
+  const i0 = segAt(Math.max(0, along - 800)), i1 = segAt(Math.min(R.total, along + 3000));
+  const S = new GB(), T = new GB(), G = new GB();
+  const C = {
+    asphalt: hex(day ? '#5d6472' : '#2c3344'), asphaltRoute: hex(day ? '#525a69' : '#283043'), shoulder: hex(day ? '#6b7280' : '#343c4f'),
+    side: hex(day ? '#b7bcc6' : '#4a5263'), curb: hex(day ? '#d0d4db' : '#5c6578'), concrete: hex(day ? '#c3c7ce' : '#525a6b'), pier: hex(day ? '#a9aeb7' : '#465062'),
+    white: hex('#f4f6fa'), yellow: hex('#f2c230'), barrier: hex(day ? '#d6d9de' : '#6d7588'), rail: hex(day ? '#c9ced6' : '#8892a6'),
+    route: hex('#2f8cff', 0.55), glow: hex('#7cc0ff', 0.22), shadow: [0, 0, 0, day ? 0.22 : 0.3]
+  };
+  const lanesAt = i => (R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
+  // --- road decks, curbs, sidewalks, markings: one piece per stretch with the same lane layout ---
+  const ps = pieces(i0, i1, i => { const si = lanesAt(i); if (!si) return 'x'; const rec = R.rec && R.rec[i]; return `${si.n}|${si.ow ? 1 : 0}|${si.bw}|${si.lw}|${si.hw}|${rec ? rec.join(',') : '-'}`; });
+  for (const p of ps) buildPiece(p, S, T, C);
+  // --- intersection pads where the route turns from one road onto another ---
+  for (let k = 1; k < R.steps.length; k++) {
+    const d = R.starts[k]; if (d < R.cum[i0] || d > R.cum[i1 + 1]) continue;
+    const ia = lanesAt(segAt(d - 2)), ib = lanesAt(segAt(d + 2));
+    const w = Math.max(ia ? (ia.ow ? ia.n / 2 : ia.n + ia.bw) * ia.lw : 4, ib ? (ib.ow ? ib.n / 2 : ib.n + ib.bw) * ib.lw : 4) + 1.5;
+    const q = toLocal(pointAt(d).pt); S.disc(q[0], q[1], elevAt(d) + 0.01, w, 20, C.asphalt, 2);
+  }
+  // --- the planned path: see-through blue in the chosen lane, with a soft glow, sitting on the deck ---
+  for (const L of routePath(i0, i1, false, i => (lanesAt(i) && R.bestM && R.bestM[i] != null) ? 'b' : 's')) {
+    const pts = L.pts.map(toLocal); if (pts.length < 2) continue;
+    const zs = L.pts.map(ll => deckZ(nearAlong(ll)));
+    const w = L.kind === 'b' ? L.lw * 0.6 : 2.4;
+    ribbonAlong(T, pts, zs, w / 2 + 0.35, 0.05, C.glow, 1);
+    ribbonAlong(T, pts, zs, w / 2, 0.06, C.route, 1);
+  }
+  // --- painted arrows in each lane before junctions (from real turn-lane data) ---
+  for (let k = 1; k < R.steps.length; k++) {
+    const g = R.guide && R.guide[k];
+    if (!g || g.conf !== 'confirmed' || R.starts[k] < R.cum[i0] || R.starts[k] > R.cum[i1 + 1]) continue;
+    for (const back of [30, 85]) {
+      const d = R.starts[k] - back; if (d < 0) continue;
+      const i = segAt(d), si = lanesAt(i); if (!si || si.n !== g.nBar) continue;
+      const p = pointAt(d), q = toLocal(p.pt), h = toRad(p.bearing), z = deckZ(d) + 0.045;
+      g.bar.forEach((b, j) => { const off = laneM(i, j); paintArrow(S, q[0] + Math.cos(h) * off, q[1] - Math.sin(h) * off, z, h, b.ind, b.ok ? C.white : hex('#c9ced8', 0.85)); });
+    }
+  }
+  // --- overpasses: real OSM bridges that cross over the route ---
+  buildCrossingBridges(S, T, C, i0, i1);
+  // --- roadside objects from OSM (lamps, signals, stop signs, trees, barriers) ---
+  buildProps(S, G, C, i0, i1);
+  // --- overhead exit signs from real exit numbers & destinations ---
+  buildSigns(S, C, i0, i1);
+  const gl = W3.gl;
+  if (W3.buf) for (const b of ['solid', 'trans', 'glow']) gl.deleteBuffer(W3.buf[b].b);
+  W3.buf = { solid: upload(gl, S), trans: upload(gl, T), glow: upload(gl, G) };
+  if (map.triggerRepaint) map.triggerRepaint();
+}
+function nearAlong(ll) {           // exact distance along the route of a point on/near it (for heights)
+  let lo = Math.max(0, segAt(lastAlong - 900)), hi = Math.min(R.c.length - 2, segAt(lastAlong + 3200)), best = null;
+  const kx = 111320 * Math.cos(toRad(ll[1])), ky = 110540;
+  for (let i = lo; i <= hi; i++) {
+    const ax = (R.c[i][0] - ll[0]) * kx, ay = (R.c[i][1] - ll[1]) * ky, dx = (R.c[i + 1][0] - R.c[i][0]) * kx, dy = (R.c[i + 1][1] - R.c[i][1]) * ky, L2 = dx * dx + dy * dy;
+    let t = L2 ? -(ax * dx + ay * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
+    const d = (ax + t * dx) ** 2 + (ay + t * dy) ** 2;
+    if (!best || d < best.d) best = { d, s: R.cum[i] + (R.cum[i + 1] - R.cum[i]) * t };
+  }
+  return best ? best.s : 0;
+}
+// road-surface height at distance d, interpolated exactly like the deck vertices
+function deckZ(d) {
+  const i = segAt(d), L = (R.cum[i + 1] - R.cum[i]) || 1, t = Math.max(0, Math.min(1, (d - R.cum[i]) / L));
+  return vertZ(i) + (vertZ(i + 1) - vertZ(i)) * t;
+}
+function ribbonAlong(gb, pts, zs, half, dz, col, mat) {
+  const L = [], Rr = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    L.push([pts[i][0] - dy * half, pts[i][1] + dx * half, zs[i] + dz]); Rr.push([pts[i][0] + dy * half, pts[i][1] - dx * half, zs[i] + dz]);
+  }
+  gb.ribbon(L, Rr, col, mat);
+}
+function buildPiece(p, S, T, C) {
+  const F = frame(p.from, p.to + 1);
+  const si = R.seg[p.from], sh = v => segShift(Math.min(v, p.to));
+  const elevated = F.some(f => f.z > 0.5);
+  if (!si || !si.n) {                                   // no lane data: plain deck at typical width so the road is still 3D
+    const hw = 3.6;
+    const L = F.map(f => at(f, -hw, 0.0)), Rr = F.map(f => at(f, hw, 0.0));
+    S.ribbon(L, Rr, C.asphalt, 2);
+    S.wall(Rr, i => F[i].z, i => F[i].z - (elevated ? 1.2 : 0.25), C.concrete, 3); S.wall(L, i => F[i].z, i => F[i].z - (elevated ? 1.2 : 0.25), C.concrete, 3, true);
+    return;
+  }
+  const { n, ow, bw, lw } = si;
+  const hw = si.hw === 'motorway' || si.hw === 'trunk' || /_link$/.test(si.hw);
+  const eL = (ow ? -n / 2 : bw) * lw, eR = (ow ? n / 2 : bw + n) * lw;
+  const shR = hw ? 2.4 : 0.6, shL = ow ? (hw ? 1.2 : 0.5) : 0;
+  const leftEdge = ow ? eL - shL : -eR;                 // two-way: draw both directions of the carriageway
+  const off = (f, o) => o + sh(f.v);
+  // deck (top) with thickness
+  const top = F.map(f => [at(f, off(f, leftEdge)), at(f, off(f, eR + shR))]);
+  S.ribbon(top.map(t => t[0]), top.map(t => t[1]), C.asphaltRoute, 2);
+  // shoulders a shade lighter
+  if (hw) { S.ribbon(F.map(f => at(f, off(f, eR), 0.004)), F.map(f => at(f, off(f, eR + shR), 0.004)), C.shoulder, 2); }
+  const depth = i => F[i].z - (F[i].z > 0.5 ? 1.3 : 0.3);
+  S.wall(top.map(t => t[1]), i => F[i].z, depth, C.concrete, 3);
+  S.wall(top.map(t => t[0]), i => F[i].z, depth, C.concrete, 3, true);
+  // city streets: curbs + sidewalks; highways / bridges: concrete barriers
+  if (!hw && !elevated) {
+    for (const [o1, o2, flip] of [[eR + shR, eR + shR + 0.25, 0], [leftEdge - 0.25, leftEdge, 1]]) {
+      const a = F.map(f => at(f, off(f, o1), 0.15)), b = F.map(f => at(f, off(f, o2), 0.15));
+      S.ribbon(a, b, C.curb, 3);
+      S.wall(flip ? b : a, i => F[i].z + 0.15, i => F[i].z, C.curb, 3, !flip);
+    }
+    const sw1 = F.map(f => at(f, off(f, eR + shR + 0.25), 0.15)), sw2 = F.map(f => at(f, off(f, eR + shR + 2.1), 0.15));
+    S.ribbon(sw1, sw2, C.side, 3);
+    if (!ow) { const a = F.map(f => at(f, off(f, leftEdge - 2.1), 0.15)), b = F.map(f => at(f, off(f, leftEdge - 0.25), 0.15)); S.ribbon(a, b, C.side, 3); }
+  } else if (elevated || (hw && si.barrier)) {
+    for (const [o, flip] of [[eR + shR, 0], [leftEdge, 1]]) {
+      const a = F.map(f => at(f, off(f, o - (flip ? -0.1 : 0.1))));
+      S.wall(a, i => F[i].z + 0.85, i => F[i].z, C.barrier, 3, !flip);
+      S.wall(a.map(q => [q[0], q[1], q[2]]), i => F[i].z + 0.85, i => F[i].z, C.barrier, 3, !!flip);
+      S.ribbon(F.map(f => at(f, off(f, o - 0.2), 0.85)), F.map(f => at(f, off(f, o + 0.2), 0.85)), C.barrier, 3);
+    }
+  }
+  // piers + ground shadow under raised decks
+  if (elevated) {
+    let next = 0;
+    for (let i = 0; i < F.length; i++) {
+      const d = R.cum[F[i].v];
+      if (F[i].z > 2.2 && d >= next) { next = d + 32; const c = at(F[i], off(F[i], (leftEdge + eR + shR) / 2)); S.box(c[0], c[1], 0, Math.max(3, (eR + shR - leftEdge) * 0.5), 1.4, F[i].z - 1.3, Math.atan2(F[i].ny, F[i].nx), C.pier, 3); }
+    }
+    const sx = 0.45 / 0.7, sy = 0.55 / 0.7;    // sun direction → shadow offset on the ground
+    const g1 = F.map(f => { const q = at(f, off(f, leftEdge)); return [q[0] - sx * f.z, q[1] - sy * f.z, 0.02]; });
+    const g2 = F.map(f => { const q = at(f, off(f, eR + shR)); return [q[0] - sx * f.z, q[1] - sy * f.z, 0.02]; });
+    T.ribbon(g1, g2, C.shadow, 1);
+  }
+  // markings (sit just above the deck)
+  const stepStart = p.from === 0 || R.segStep[p.from - 1] !== R.segStep[p.from];
+  const stepEnd = p.to >= R.c.length - 2 || R.segStep[p.to + 1] !== R.segStep[p.to];
+  const lineAt = (o, w, col, dash) => markLine(S, F, f => off(f, o), w, col, dash, stepStart, stepEnd);
+  for (let b = 1; b < n; b++) lineAt(eL + b * lw, 0.15, C.white, [3.05, 9.15]);       // US broken line: 10 ft dash, 30 ft gap
+  lineAt(eR - 0.12, 0.15, C.white);                                                     // right edge line
+  if (ow) lineAt(eL + 0.12, 0.15, C.yellow);                                            // left edge of a one-way roadway is yellow
+  else { lineAt(-0.12, 0.12, C.yellow); lineAt(0.12, 0.12, C.yellow);                   // double yellow centre line
+    for (let b = 1; b < n; b++) lineAt(-(bw + b) * lw, 0.15, C.white, [3.05, 9.15]); lineAt(-eR + 0.12, 0.15, C.white); }
+}
+// paint a (possibly dashed) line on the deck, following the road exactly
+function markLine(gb, F, offFn, w, col, dash, trimS, trimE) {
+  let acc = 0;
+  const total = R.cum[F[F.length - 1].v] - R.cum[F[0].v];
+  const s0 = trimS ? 10 : 0, s1 = total - (trimE ? 10 : 0);
+  for (let i = 0; i < F.length - 1; i++) {
+    const a = F[i], b = F[i + 1], L = R.cum[b.v] - R.cum[a.v];
+    if (L <= 0) continue;
+    const pieces2 = [];
+    if (!dash) pieces2.push([Math.max(0, s0 - acc) / L, Math.min(L, s1 - acc) / L]);
+    else {
+      const per = dash[0] + dash[1];
+      for (let t = Math.floor(acc / per) * per; t < acc + L; t += per) {
+        const d0 = Math.max(t, acc, s0), d1 = Math.min(t + dash[0], acc + L, s1);
+        if (d1 > d0) pieces2.push([(d0 - acc) / L, (d1 - acc) / L]);
+      }
+    }
+    for (const [u0, u1] of pieces2) {
+      if (!(u1 > u0)) continue;
+      const lerpF = u => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, nx: a.nx + (b.nx - a.nx) * u, ny: a.ny + (b.ny - a.ny) * u, z: a.z + (b.z - a.z) * u, v: a.v });
+      const fa = lerpF(u0), fb = lerpF(u1), oa = offFn(a), ob = offFn(b);
+      const o0 = oa + (ob - oa) * u0, o1 = oa + (ob - oa) * u1;
+      gb.quad(at(fa, o0 - w / 2, 0.03), at(fa, o0 + w / 2, 0.03), at(fb, o1 + w / 2, 0.03), at(fb, o1 - w / 2, 0.03), col, 1, [0, 0, 1]);
+    }
+    acc += L;
+  }
+}
+function paintArrow(gb, x, y, z, h, inds, col) {   // h = travel bearing (rad, clockwise from north)
+  const fwd = [Math.sin(h), Math.cos(h)], rt = [Math.cos(h), -Math.sin(h)];
+  const P = (r, f) => [x + rt[0] * r + fwd[0] * f, y + rt[1] * r + fwd[1] * f, z];
+  for (const ind of inds) {
+    const kind = arrowKind(ind), s = /left/.test(ind) ? -1 : 1;
+    gb.quad(P(-0.15, -3), P(0.15, -3), P(0.15, kind === 'straight' ? 1.6 : 0.6), P(-0.15, kind === 'straight' ? 1.6 : 0.6), col, 1, [0, 0, 1]);
+    if (kind === 'straight') gb.tri(P(-0.55, 1.6), P(0.55, 1.6), P(0, 3.0), col, 1, [0, 0, 1]);
+    else if (kind === 'slight') { gb.quad(P(-0.15 * s, 0.4), P(0.15 * s, 0.6), P(0.6 * s, 1.6), P(0.35 * s, 1.75), col, 1, [0, 0, 1]); gb.tri(P(0.15 * s, 1.75), P(0.95 * s, 1.35), P(0.85 * s, 2.6), col, 1, [0, 0, 1]); }
+    else { gb.quad(P(0, 0.35), P(0, 0.75), P(0.9 * s, 0.75), P(0.9 * s, 0.35), col, 1, [0, 0, 1]); gb.tri(P(0.9 * s, 0.0), P(0.9 * s, 1.1), P(1.6 * s, 0.55), col, 1, [0, 0, 1]); }
+  }
+}
+// OSM bridges that pass OVER the route (not the route itself): deck, parapets, abutments
+function buildCrossingBridges(S, T, C, i0, i1) {
+  const own = new Set((R.segWay || []).slice(i0, i1 + 1));
+  const near = [];
+  for (let i = i0; i <= i1; i += 3) near.push(R.c[i]);
+  for (const w of LD.ways.values()) {
+    const t = w.t;
+    if (!t.bridge || t.bridge === 'no' || own.has(w.id)) continue;
+    const lay = parseInt(t.layer, 10) || 1; if (lay < 1) continue;
+    const pts = w.g.filter(p => near.some(q => Math.abs(p[0] - q[0]) < 0.004 && Math.abs(p[1] - q[1]) < 0.003));
+    if (pts.length < 2) continue;
+    const z = lay * 6.5, width = Math.max(2, parseInt(t.lanes, 10) || 2) * 3.5 + 1.5;
+    const L = pts.map(toLocal), Lp = [], Rp = [];
+    for (let i = 0; i < L.length; i++) {
+      const a = L[Math.max(0, i - 1)], b = L[Math.min(L.length - 1, i + 1)];
+      let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      Lp.push([L[i][0] - dy * width / 2, L[i][1] + dx * width / 2, z]); Rp.push([L[i][0] + dy * width / 2, L[i][1] - dx * width / 2, z]);
+    }
+    S.ribbon(Lp, Rp, C.asphalt, 2);
+    S.ribbon(Lp.map(p => [p[0], p[1], z - 1.2]), Rp.map(p => [p[0], p[1], z - 1.2]), C.concrete, 3);
+    S.wall(Rp, () => z + 0.9, () => z - 1.2, C.barrier, 3); S.wall(Lp, () => z + 0.9, () => z - 1.2, C.barrier, 3, true);
+    for (const e of [0, L.length - 1]) {   // abutments at each end of the mapped bridge
+      const a = Lp[e], b = Rp[e];
+      S.quad([a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], 0], [a[0], a[1], 0], C.pier, 3);
+    }
+  }
+}
+/* ---------- real roadside objects from OpenStreetMap ---------- */
+function addProp(e) {
+  const t = e.tags || {};
+  if (e.type === 'node') {
+    const ll = [e.lon, e.lat];
+    if (t.highway === 'street_lamp') W3.props.lamps.set(e.id, ll);
+    else if (t.highway === 'traffic_signals' || t.crossing === 'traffic_signals') W3.props.signals.set(e.id, ll);
+    else if (t.highway === 'stop') W3.props.stops.set(e.id, ll);
+    else if (t.natural === 'tree') W3.props.trees.set(e.id, { ll, h: parseFloat(t.height) || 0 });
+  } else if (e.type === 'way' && e.geometry) {
+    const g = e.geometry.map(p => [p.lon, p.lat]);
+    if (t.natural === 'tree_row') g.forEach((ll, i) => W3.props.trees.set(e.id * 1000 + i, { ll, h: 0 }));
+    else if (t.barrier) W3.props.barriers.set(e.id, { g, kind: t.barrier });
+  }
+}
+// height of the road surface near a point (so lamps on a bridge stand on the bridge)
+function groundZ(ll) { if (!R || !R.elev) return 0; const d = nearAlong(ll), p = pointAt(d).pt; return hav(p, ll) < 14 ? deckZ(d) : 0; }
+function buildProps(S, G, C, i0, i1) {
+  const lo = R.cum[i0], hi = R.cum[i1 + 1];
+  const nearRoute = ll => { const d = nearAlong(ll); return d >= lo && d <= hi && hav(pointAt(d).pt, ll) < 45; };
+  const day = !W3.night;
+  const pole = hex(day ? '#7d8593' : '#59627a'), warm = hex('#ffd98a'), headOff = hex(day ? '#e8e2cf' : '#ffe9b0');
+  for (const ll of W3.props.lamps.values()) {
+    if (!nearRoute(ll)) continue;
+    const q = toLocal(ll), z = groundZ(ll), d = nearAlong(ll), toward = toLocal(pointAt(d).pt);
+    let ax = toward[0] - q[0], ay = toward[1] - q[1]; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
+    S.cyl(q[0], q[1], z, z + 8.5, 0.12, 6, pole, 0);
+    S.box(q[0] + ax * 0.9, q[1] + ay * 0.9, z + 8.4, 0.12, 1.8, 0.12, Math.atan2(-ax, ay), pole, 0);
+    S.box(q[0] + ax * 1.8, q[1] + ay * 1.8, z + 8.25, 0.5, 0.9, 0.18, Math.atan2(-ax, ay), W3.night ? warm : headOff, W3.night ? 1 : 0);
+    if (W3.night) G.disc(q[0] + ax * 2.4, q[1] + ay * 2.4, z + 0.07, 9, 18, [1, 0.78, 0.45, 0.22], 1);   // pool of light on the road
+  }
+  for (const ll of W3.props.signals.values()) {
+    if (!nearRoute(ll)) continue;
+    const q = toLocal(ll), z = groundZ(ll);
+    S.cyl(q[0], q[1], z, z + 5.2, 0.13, 6, pole, 0);
+    S.box(q[0], q[1], z + 4.1, 0.4, 0.35, 1.1, 0, hex('#1c1f26'), 0);
+    [['#ff4d4d', 4.95], ['#ffc83d', 4.65], ['#3ddc84', 4.35]].forEach(([c, h]) => S.box(q[0], q[1] - 0.19, z + h - 0.11, 0.22, 0.04, 0.22, 0, hex(c), 1));
+  }
+  for (const ll of W3.props.stops.values()) {
+    if (!nearRoute(ll)) continue;
+    const q = toLocal(ll), z = groundZ(ll);
+    S.cyl(q[0], q[1], z, z + 2.2, 0.05, 5, pole, 0);
+    for (let i = 0; i < 8; i++) {   // red octagon, facing traffic
+      const a0 = (i + 0.5) / 8 * Math.PI * 2, a1 = (i + 1.5) / 8 * Math.PI * 2, r = 0.38, cz = z + 2.45;
+      S.tri([q[0], q[1] - 0.05, cz], [q[0] + r * Math.cos(a0), q[1] - 0.05, cz + r * Math.sin(a0)], [q[0] + r * Math.cos(a1), q[1] - 0.05, cz + r * Math.sin(a1)], hex('#d7262b'), 0);
+    }
+  }
+  const leaf = [hex(day ? '#4f8a3c' : '#2a4a2a'), hex(day ? '#5d9a45' : '#2f5330'), hex(day ? '#467c37' : '#264325')];
+  let ti = 0;
+  for (const tr of W3.props.trees.values()) {
+    if (!nearRoute(tr.ll)) continue;
+    const q = toLocal(tr.ll), z = groundZ(tr.ll), h = Math.max(5, Math.min(18, tr.h || 8 + (ti % 5)));
+    S.cyl(q[0], q[1], z, z + h * 0.45, 0.22, 5, hex(day ? '#6b4f36' : '#3d2e22'), 0);
+    S.blob(q[0], q[1], z + h * 0.62, h * 0.32, h * 0.33, leaf[ti++ % 3], 0);
+  }
+  for (const b of W3.props.barriers.values()) {
+    const pts = b.g.filter(nearRoute); if (pts.length < 2) continue;
+    const L = pts.map(ll => { const q = toLocal(ll); return [q[0], q[1], groundZ(ll)]; });
+    if (/guard_rail/.test(b.kind)) {          // steel W-beam on posts
+      S.wall(L, i => L[i][2] + 0.75, i => L[i][2] + 0.45, C.rail, 0); S.wall(L, i => L[i][2] + 0.75, i => L[i][2] + 0.45, C.rail, 0, true);
+      for (let i = 0; i < L.length; i++) S.box(L[i][0], L[i][1], L[i][2], 0.12, 0.12, 0.7, 0, pole, 0);
+    } else {                                  // concrete (jersey) barrier / wall
+      const h = b.kind === 'wall' ? 2.2 : 0.85;
+      S.wall(L, i => L[i][2] + h, i => L[i][2], C.barrier, 3); S.wall(L, i => L[i][2] + h, i => L[i][2], C.barrier, 3, true);
+    }
+  }
+}
+
+/* ---------- overhead exit signs (only real exit numbers / destinations from the route data) ---------- */
+function signTexture(gl, st) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#00703c'; g.fillRect(0, 0, 512, 256);
+  g.strokeStyle = '#ffffff'; g.lineWidth = 8; g.strokeRect(10, 10, 492, 236);
+  const dest = (st.destinations || '').split(':');
+  const refs = dest.length > 1 ? dest[0].replace(/\bI (\d)/g, 'I-$1').replace(/\bUS (\d)/g, 'US $1') : '';
+  const names = (dest.length > 1 ? dest.slice(1).join(':') : dest[0] || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 2);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  let y = 70;
+  if (refs) { g.font = 'bold 44px -apple-system, Helvetica, Arial, sans-serif'; g.fillText(refs, 256, y); y += 56; }
+  g.font = 'bold 40px -apple-system, Helvetica, Arial, sans-serif';
+  names.forEach(n => { g.fillText(n, 256, y); y += 48; });
+  if (!refs && !names.length) { g.font = 'bold 46px -apple-system, Helvetica, Arial, sans-serif'; g.fillText('EXIT', 256, 128); }
+  g.save(); g.translate(452, 200); g.rotate(Math.PI / 4); g.fillRect(-6, -26, 12, 40); g.beginPath(); g.moveTo(-20, -18); g.lineTo(20, -18); g.lineTo(0, -40); g.closePath(); g.fill(); g.restore();
+  if (st.exits) {   // EXIT tab
+    g.fillStyle = '#00703c'; g.strokeStyle = '#fff'; g.lineWidth = 5; g.fillRect(300, 14, 196, 50); g.strokeRect(300, 14, 196, 50);
+    g.fillStyle = '#fff'; g.font = 'bold 32px -apple-system, Helvetica, Arial, sans-serif'; g.fillText('EXIT ' + st.exits.split(';')[0], 398, 40);
+  }
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+function buildSigns(S, C, i0, i1) {
+  const gl = W3.gl;
+  for (const s of W3.signs) { gl.deleteBuffer(s.buf); }
+  W3.signs = W3.signs.filter(s => s.keep);   // textures cached in W3.texCache
+  W3.texCache = W3.texCache || new Map();
+  const steel = hex(W3.night ? '#6c768b' : '#9aa2b0');
+  for (let k = 1; k < R.steps.length; k++) {
+    const st = R.steps[k], m = st.maneuver;
+    if (!(m.type === 'off ramp' || m.type === 'fork') || !(st.exits || st.destinations) || !R.motor[k - 1]) continue;
+    for (const back of [420, 0]) {             // advance gantry, then the sign at the exit itself
+      const d = Math.max((R.starts[k - 1] || 0) + 5, R.starts[k] - back);
+      if (d < R.cum[i0] || d > R.cum[i1 + 1]) continue;
+      const i = segAt(d), si = R.seg[i] && R.seg[i].n ? R.seg[i] : null;
+      const p = pointAt(d), q = toLocal(p.pt), h = toRad(p.bearing), z = deckZ(d);
+      const rt = [Math.cos(h), -Math.sin(h)], fw = [Math.sin(h), Math.cos(h)];
+      const lw = si ? si.lw : 3.6, n = si ? si.n : 3;
+      const eL = (si && !si.ow ? si.bw : -n / 2) * lw + segShift(i), eR = eL + n * lw, sh = 2.4;
+      const P = (o, f, up) => [q[0] + rt[0] * o + fw[0] * f, q[1] + rt[1] * o + fw[1] * f, z + up];
+      const sideRight = (m.modifier || 'right').includes('right');
+      if (back) {                                // gantry spanning the carriageway
+        for (const o of [eL - 1.6, eR + sh + 0.6]) S.box(...P(o, 0, 0).slice(0, 2), z, 0.45, 0.45, 7.4, h, steel, 0);
+        S.box(...P((eL - 1.6 + eR + sh + 0.6) / 2, 0, 0).slice(0, 2), z + 6.6, eR + sh + 2.2 - eL, 0.35, 0.5, -h + Math.PI / 2 - Math.PI / 2 + 0, steel, 0);
+      } else {
+        S.box(...P(eR + sh + 2, 0, 0).slice(0, 2), z, 0.2, 0.2, 4.2, h, steel, 0);
+      }
+      // sign panel over the exit side lanes (or beside the road at the exit itself)
+      const c = back ? (sideRight ? eR - lw : eL + lw) : eR + sh + 2, wid = back ? 5.6 : 3.4, hgt = back ? 2.8 : 1.7, zb = back ? 6.95 : 2.6;
+      const a = P(c - wid / 2, -0.3, zb), b = P(c + wid / 2, -0.3, zb), cc = P(c + wid / 2, -0.3, zb + hgt), dd = P(c - wid / 2, -0.3, zb + hgt);
+      const key = (st.exits || '') + '|' + (st.destinations || '') + '|' + back;
+      let tex = W3.texCache.get(key); if (!tex) { tex = signTexture(gl, back ? st : { exits: st.exits }); W3.texCache.set(key, tex); }
+      const v = [...a, 0, 1, ...b, 1, 1, ...cc, 1, 0, ...a, 0, 1, ...cc, 1, 0, ...dd, 0, 0];
+      const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      W3.signs.push({ buf, tex });
+      S.quad(P(c - wid / 2, -0.22, zb), P(c + wid / 2, -0.22, zb), P(c + wid / 2, -0.22, zb + hgt), P(c - wid / 2, -0.22, zb + hgt), steel, 0);   // back of panel (behind the printed face)
+    }
+  }
+}
 
 /* ---------- Flow: pick → preview → drive ---------- */
 async function pickDest(place, fromLL) {
@@ -1940,7 +2576,8 @@ $('cancelBtn').onclick = () => endTrip();
 function syncModeUI() {
   const w = travel === 'walk';
   $('modeIco').textContent = w ? '🚶' : '🚗'; $('modeTxt').textContent = w ? 'Walk' : 'Car';
-  $('modeNav').textContent = w ? '🚗' : '🚶';
+  $('modeNav').textContent = w ? '🚗 Drive' : '🚶 Walk';
+  try { set2DRange(W3.ok && !w); } catch (e) {}
   $('mDrive').classList.toggle('on', !w); $('mWalk').classList.toggle('on', w);
   if (mode === 'nav') saveCam();
 }
@@ -2012,17 +2649,17 @@ $('driveBtn').onclick = () => {
   else if (gps) navUpdate(gps);
 };
 $('endBtn').onclick = () => endTrip();
-$('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; if (muted) try { speechSynthesis.cancel(); } catch (e) {} };
+$('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇 Muted' : '🔊 Voice'; if (muted) try { speechSynthesis.cancel(); } catch (e) {} };
 $('recenter').onclick = () => {
   if (viewMode === 'overview') { viewMode = followView; syncViewUI(); }
   following = true; $('recenter').classList.add('hidden'); if (gps && !sim) navUpdate(gps);
 };
 $('viewBtn').onclick = () => {
-  viewMode = viewMode === '3d' ? '2d' : viewMode === '2d' ? 'overview' : '3d';
+  viewMode = viewMode === '3d' ? 'wide' : viewMode === 'wide' ? '2d' : viewMode === '2d' ? 'overview' : '3d';
   if (viewMode !== 'overview') { followView = viewMode; try { localStorage.setItem('rv_view', viewMode); } catch (e) {} following = true; $('recenter').classList.add('hidden'); }
   else { showOverview(); $('recenter').classList.remove('hidden'); }
   syncViewUI();
-  toast(viewMode === '3d' ? '3D navigation view' : viewMode === '2d' ? '2D view (heading up)' : 'Route overview — tap Re-center to follow again', 1600);
+  toast(viewMode === '3d' ? '3D close-up view' : viewMode === 'wide' ? '3D wide view' : viewMode === '2d' ? '2D view (heading up)' : 'Route overview — tap Re-center to follow again', 1600);
   if (viewMode !== 'overview' && gps && !sim) navUpdate(gps);
 };
 function fmtRef(r) { return String(r || '').split(';')[0].replace(/^I (\d)/, 'I-$1').replace(/^US (\d)/, 'US-$1').replace(/^([A-Z]{2}) (\d)/, '$1-$2'); }
@@ -2058,6 +2695,7 @@ function endTrip() {
   stopSim();
   R = null; dest = null; arrived = false;
   stops = []; addingStop = false; placeStopPins(); renderStops();
+  W3.buf = null; W3.car = null; try { carMarker.getElement().style.visibility = ''; } catch (e) {}
   walkLook(false); syncModeUI();
   $('finder').classList.add('hidden'); $('walkOn').classList.add('hidden');
   const empty = { type: 'FeatureCollection', features: [] };
@@ -2075,10 +2713,8 @@ function endTrip() {
 /* ---------- Navigation core ---------- */
 function speedZoom(v) {
   const mph = (v || 0) * 2.237;
-  if (mph < 20) return 17.6;
-  if (mph < 40) return 17.1;
-  if (mph < 58) return 16.5;
-  return 15.9;
+  // close, in-car 3D view; pulls back smoothly with speed so highways show more road ahead
+  return Math.max(17.2, Math.min(18.7, 18.7 - Math.max(0, mph - 15) * 0.03));
 }
 function navUpdate(f) {
   if (!R || arrived) return;
@@ -2188,6 +2824,9 @@ function navUpdate(f) {
   carOffS = carOffS == null ? offM : carOffS + (offM - carOffS) * 0.35;
   const carPos = on ? shiftLL(pos, s.bearing, carOffS) : pos;
   carMarker.setLngLat(carPos).setRotation(lastHeading);
+  W3.car = travel === 'drive' ? { ll: carPos, h: lastHeading, z: deckZ(along) } : null;
+  const show3D = W3.ok && W3.buf && travel === 'drive' && map.getZoom && map.getZoom() >= W3.minZoom;
+  try { carMarker.getElement().style.visibility = show3D ? 'hidden' : ''; } catch (e) {}
   if (!carMarker._map) carMarker.addTo(map);
   if (on) buildRouteData(along, false);
 
@@ -2195,12 +2834,13 @@ function navUpdate(f) {
   updateRoadPill(along);
   if (following && !camGesture && viewMode !== 'overview') {
     let z = walk ? 18.6 : speedZoom(f.speed), pitch = walk ? 50 : 60;
-    if (g && !g.all && dTurn < (g.hw ? 700 : 220)) { z = Math.min(18.3, z + 0.6); pitch = 64; }   // complex junction ahead: closer, steeper
+    if (g && !g.all && dTurn < (g.hw ? 700 : 220)) { z = Math.min(19, z + 0.4); pitch = 64; }   // complex junction ahead: closer, steeper
     const pref = camPref[travel];
     if (pref.z != null) z = pref.z;          // your zoom wins over auto zoom
     if (pref.p != null) pitch = pref.p;      // and your tilt
     const flat = viewMode === '2d';
     if (flat) { pitch = 0; z -= 0.3; }
+    if (viewMode === 'wide') { z = Math.max(W3.minZoom + 0.6, z - 1.6); pitch = Math.min(pitch, 58); }   // wider 3D overview of the road ahead
     map.easeTo({ center: carPos, bearing: lastHeading, pitch, zoom: z,
       duration: f.sim ? 260 : 950, easing: t => t, offset: [0, map.getContainer().clientHeight * (flat ? 0.17 : 0.27)] });
   }
@@ -2211,7 +2851,7 @@ let viewMode = '3d';
 try { viewMode = localStorage.getItem('rv_view') || '3d'; if (viewMode === 'overview') viewMode = '3d'; } catch (e) {}
 let followView = viewMode;
 function syncViewUI() {
-  $('viewBtn').innerHTML = viewMode === '3d' ? '<b>3D</b><small>view</small>' : viewMode === '2d' ? '<b>2D</b><small>view</small>' : '<b>⤢</b><small>route</small>';
+  $('viewBtn').innerHTML = viewMode === '3d' ? '<b>3D</b><small>close</small>' : viewMode === 'wide' ? '<b>3D</b><small>wide</small>' : viewMode === '2d' ? '<b>2D</b><small>view</small>' : '<b>⤢</b><small>route</small>';
 }
 function showOverview() {
   if (!R) return;
@@ -2360,6 +3000,8 @@ function init() {
       addLaneLayers();
       addTurnLayers();
     }
+    if (!map.getLayer('road3d')) { try { map.addLayer(road3dLayer, map.getLayer('building-3d') ? 'building-3d' : undefined); } catch (e) { W3.ok = false; } }
+    set2DRange(W3.ok && travel === 'drive');
     if (gps) setScale(gps.lat);
     applyScale();
     applyTheme(true); syncThemeUI();
