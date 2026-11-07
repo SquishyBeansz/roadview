@@ -1429,9 +1429,10 @@ function applyScale() {
   // route + lanes (all widths in real metres)
   P('rt-car', 'line-width', MW(['get', 'wm'], 1.5));
   P('rt-lane', 'line-width', MW(['*', 0.92, ['get', 'wm']], 1));
-  P('rt-best-casing', 'line-width', MW(['*', 0.86, ['get', 'wm']], 3.5));
-  P('rt-best', 'line-width', MW(['*', 0.72, ['get', 'wm']], 2.6));
-  P('rt-flow', 'line-width', MW(['*', 0.26, ['get', 'wm']], 0.6));
+  // blue lane line: 60% of the lane wide, so there's clear road between it and the lane lines on both sides
+  P('rt-best-casing', 'line-width', MW(['*', 0.64, ['get', 'wm']], 1.4));
+  P('rt-best', 'line-width', MW(['*', 0.6, ['get', 'wm']], 1.2));
+  P('rt-flow', 'line-width', MW(['*', 0.2, ['get', 'wm']], 0.5));
   P('rt-dash', 'line-width', MW(0.15, 0.6)); P('rt-edgeR', 'line-width', MW(0.15, 0.6)); P('rt-edgeY', 'line-width', MW(0.12, 0.5));
   P('route-casing', 'line-width', MW(3.0, 6)); P('route-line', 'line-width', MW(2.4, 3.8));
   P('turn-casing', 'line-width', MW(1.9, 5)); P('turn-line', 'line-width', MW(1.0, 2.5));
@@ -1587,10 +1588,10 @@ function addLaneLayers() {
   const L = (id, filter, paint, layout) => map.addLayer({ id, type: 'line', source: src, filter,
     layout: Object.assign({ 'line-join': 'round' }, layout || {}), paint }, before);
   L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2b3245' });
-  L('rt-lane', ['==', ['get', 'k'], 'lane'], { 'line-color': '#2f8cff', 'line-opacity': ['match', ['get', 'st'], 2, 0.42, 1, 0.14, 0] });
-  L('rt-best-casing', ['==', ['get', 'k'], 'best'], { 'line-color': '#0b3a86', 'line-opacity': 0.9 }, { 'line-cap': 'round' });
-  L('rt-best', ['==', ['get', 'k'], 'best'], { 'line-color': '#2f8cff', 'line-opacity': 0.95 }, { 'line-cap': 'round' });
-  L('rt-flow', ['==', ['get', 'k'], 'best'], { 'line-color': '#dff0ff', 'line-opacity': 0.75, 'line-dasharray': [0, 4, 3] });
+  L('rt-lane', ['==', ['get', 'k'], 'lane'], { 'line-color': '#2f8cff', 'line-opacity': ['match', ['get', 'st'], 2, 0.16, 1, 0.07, 0] });
+  L('rt-best-casing', ['==', ['get', 'k'], 'best'], { 'line-color': '#7cc0ff', 'line-opacity': 0.35, 'line-blur': 1.5 }, { 'line-cap': 'round' });   // soft glow edge
+  L('rt-best', ['==', ['get', 'k'], 'best'], { 'line-color': '#2f8cff', 'line-opacity': 0.55 }, { 'line-cap': 'round' });   // see-through: road shows underneath
+  L('rt-flow', ['==', ['get', 'k'], 'best'], { 'line-color': '#dff0ff', 'line-opacity': 0.4, 'line-dasharray': [0, 4, 3] });
   L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-dasharray': [4, 7] });   // markings sit ON TOP of the blue line
   L('rt-edgeR', ['==', ['get', 'k'], 'edgeR'], { 'line-color': '#f2f5fb' });
   L('rt-edgeY', ['==', ['get', 'k'], 'edgeY'], { 'line-color': '#f0c23b' });
