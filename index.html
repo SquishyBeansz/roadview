@@ -285,7 +285,7 @@ const PALETTES = {
       tertiary: ['#4a5570', '#2e3547'], minor: ['#39445e', '#2b3243'], service: ['#2b3345', '#262d3c'] },
     casing: '#070c16', edge: '#a7b0c4', shadow: 'rgba(0,0,0,0.6)', tunnel: '#273043', rail: '#3b4458', railDash: '#1a2131',
     label: '#d5ddeb', labelMinor: '#93a2bf', halo: '#0d1422', place: '#eef2fa', placeMinor: '#94a6c6', poiText: '#c6d1e6',
-    hsShadow: '#000000', hsHi: '#33445f', hsAccent: '#0d1422', path: '#4a5b80', side: '#2c3447', centre: '#d9b43a', asphalt: '#2b3245', light: 0.25 },
+    hsShadow: '#000000', hsHi: '#33445f', hsAccent: '#0d1422', path: '#4a5b80', side: '#2c3447', centre: '#d9b43a', asphalt: '#2f374c', shoulder: '#3a4357', light: 0.25 },
   day: { bg: '#eef0f3', res: '#e7eaef', comm: '#f2ede7', ind: '#e9e7ef', hosp: '#f7e7ea', school: '#f0ebe0', cem: '#dfe9da',
     park: '#cde7c4', wood: '#c1dfb6', grass: '#d2eac8', farm: '#eef1e1', sand: '#f2ead5', wet: '#d4eae5', ice: '#f4f8fc',
     water: '#a6d0f4', waterLine: '#8dc0ee', waterText: '#3b74b3', aero: '#e3e5eb', runway: '#c1c6d0',
@@ -294,7 +294,7 @@ const PALETTES = {
       tertiary: ['#ffffff', '#8a92a1'], minor: ['#ffffff', '#9198a6'], service: ['#fbfbfc', '#9aa1ad'] },
     casing: '#c7ccd6', edge: '#ffffff', shadow: 'rgba(30,40,60,0.35)', tunnel: '#d6dae2', rail: '#a3aab7', railDash: '#ffffff',
     label: '#273041', labelMinor: '#5b677d', halo: '#ffffff', place: '#111827', placeMinor: '#4a5569', poiText: '#3a465c',
-    hsShadow: '#5b6c86', hsHi: '#ffffff', hsAccent: '#8d9cb4', path: '#9aa6bd', side: '#d3d7df', centre: '#e0b23a', asphalt: '#5f6776', light: 0.4 }
+    hsShadow: '#5b6c86', hsHi: '#ffffff', hsAccent: '#8d9cb4', path: '#9aa6bd', side: '#d3d7df', centre: '#e0b23a', asphalt: '#5c6473', shoulder: '#9aa1ae', light: 0.4 }
 };
 // colour that changes from map-overview hierarchy (low zoom) to real asphalt (navigation zoom)
 const zc = ([lo, hi]) => ['interpolate', ['linear'], ['zoom'], 12, lo, 14.5, lo, 16, hi];
@@ -1427,13 +1427,14 @@ function applyScale() {
   const P = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch (e) {} };
   const Lp = (id, prop, v) => { try { if (map.getLayer(id)) map.setLayoutProperty(id, prop, v); } catch (e) {} };
   // route + lanes (all widths in real metres)
+  P('rt-shoulder', 'line-width', MW(['+', ['get', 'wm'], 1.8], 2.2));
   P('rt-car', 'line-width', MW(['get', 'wm'], 1.5));
   P('rt-lane', 'line-width', MW(['*', 0.92, ['get', 'wm']], 1));
   // blue lane line: 60% of the lane wide, so there's clear road between it and the lane lines on both sides
   P('rt-best-casing', 'line-width', MW(['*', 0.64, ['get', 'wm']], 1.4));
   P('rt-best', 'line-width', MW(['*', 0.6, ['get', 'wm']], 1.2));
   P('rt-flow', 'line-width', MW(['*', 0.2, ['get', 'wm']], 0.5));
-  P('rt-dash', 'line-width', MW(0.15, 0.6)); P('rt-edgeR', 'line-width', MW(0.15, 0.6)); P('rt-edgeY', 'line-width', MW(0.12, 0.5));
+  P('rt-dash', 'line-width', MW(0.18, 0.9)); P('rt-edgeR', 'line-width', MW(0.18, 0.9)); P('rt-edgeY', 'line-width', MW(0.15, 0.8));
   P('route-casing', 'line-width', MW(3.0, 6)); P('route-line', 'line-width', MW(2.4, 3.8));
   P('turn-casing', 'line-width', MW(1.9, 5)); P('turn-line', 'line-width', MW(1.0, 2.5));
   const icon = (metres, px) => ['interpolate', ['exponential', 2], ['zoom'], 14, metres * PXM.z16 / 4 / px, 16, metres * PXM.z16 / px, 20, metres * PXM.z20 / px];
@@ -1544,8 +1545,8 @@ function buildRouteData(along, force) {
   if (!force && Math.abs(along - lastBuild.along) < 60 && lastBuild.ver === ver) return;
   lastBuild = { along, ver };
   const N = R.c.length - 1, feats = [];
-  const i0 = segAt(Math.max(0, along - 25)), iWin = segAt(Math.min(R.total, along + 3500));
-  const lanesAt = i => (travel === 'drive' && i <= iWin && R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
+  const i0 = segAt(Math.max(0, along - 1500)), iWin = segAt(Math.min(R.total, along + 3500));
+  const lanesAt = i => (travel === 'drive' && i >= i0 && i <= iWin && R.seg && R.seg[i] && R.seg[i].n) ? R.seg[i] : null;
   recVisible = false;
   // lanes & markings from map data
   const lp = pieces(i0, iWin, i => {
@@ -1556,7 +1557,7 @@ function buildRouteData(along, force) {
   for (const p of lp) emitLanes(p, feats);
   // planned path: blue line in the chosen lane where lanes are known, plain route line elsewhere
   const kind = i => (lanesAt(i) && R.bestM && R.bestM[i] != null) ? 'b' : 's';
-  for (const L of routePath(i0, N - 1, false, kind)) {
+  for (const L of routePath(0, N - 1, false, kind)) {      // the whole route, including what you've already driven
     if (L.pts.length < 2) continue;
     if (L.kind === 'b') recVisible = true;
     feats.push({ type: 'Feature', properties: L.kind === 'b' ? { k: 'best', wm: L.lw } : { k: 'simple' }, geometry: { type: 'LineString', coordinates: L.pts } });
@@ -1587,12 +1588,13 @@ function addLaneLayers() {
   const src = 'route', before = 'building-3d';
   const L = (id, filter, paint, layout) => map.addLayer({ id, type: 'line', source: src, filter,
     layout: Object.assign({ 'line-join': 'round' }, layout || {}), paint }, before);
-  L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2b3245' });
+  L('rt-shoulder', ['==', ['get', 'k'], 'car'], { 'line-color': '#3a4357' });                    // paved shoulder / curb strip
+  L('rt-car', ['==', ['get', 'k'], 'car'], { 'line-color': '#2f374c' });
   L('rt-lane', ['==', ['get', 'k'], 'lane'], { 'line-color': '#2f8cff', 'line-opacity': ['match', ['get', 'st'], 2, 0.16, 1, 0.07, 0] });
   L('rt-best-casing', ['==', ['get', 'k'], 'best'], { 'line-color': '#7cc0ff', 'line-opacity': 0.35, 'line-blur': 1.5 }, { 'line-cap': 'round' });   // soft glow edge
   L('rt-best', ['==', ['get', 'k'], 'best'], { 'line-color': '#2f8cff', 'line-opacity': 0.55 }, { 'line-cap': 'round' });   // see-through: road shows underneath
   L('rt-flow', ['==', ['get', 'k'], 'best'], { 'line-color': '#dff0ff', 'line-opacity': 0.4, 'line-dasharray': [0, 4, 3] });
-  L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-dasharray': [4, 7] });   // markings sit ON TOP of the blue line
+  L('rt-dash', ['==', ['get', 'k'], 'dash'], { 'line-color': '#f2f5fb', 'line-dasharray': [17, 51] });   // markings sit ON TOP of the blue line
   L('rt-edgeR', ['==', ['get', 'k'], 'edgeR'], { 'line-color': '#f2f5fb' });
   L('rt-edgeY', ['==', ['get', 'k'], 'edgeY'], { 'line-color': '#f0c23b' });
   map.addLayer({ id: 'route-casing', type: 'line', source: src, filter: ['==', ['get', 'k'], 'simple'], layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -1745,6 +1747,7 @@ function applyTheme(force) {
   }
   try { map.setLight(st.light); } catch (e) {}
   try { if (map.getLayer('rt-car')) map.setPaintProperty('rt-car', 'line-color', PALETTES[name].asphalt); } catch (e) {}
+  try { if (map.getLayer('rt-shoulder')) map.setPaintProperty('rt-shoulder', 'line-color', PALETTES[name].shoulder); } catch (e) {}
   themeNow = name;
   document.body.dataset.theme = name;
   applyScale();
